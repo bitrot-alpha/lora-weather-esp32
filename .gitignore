@@ -1,0 +1,5 @@
+## Arduino Debug Files ##
+debug.cfg
+debug_custom.json
+*.svd
+
