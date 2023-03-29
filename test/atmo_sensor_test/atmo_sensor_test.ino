@@ -29,6 +29,7 @@ void setup()
     Wire1.begin(39, 40);
     oled.init();
     oled.clear();
+    oled.setFont(ArialMT_Plain_16);
     //wait for serial
     while(!Serial);
 
@@ -57,14 +58,14 @@ void loop()
 void oled_display()
 {
   oled.clear();
-  snprintf(temp_str, 20, "Temp: %4.2f C\0", temperature);
+  snprintf(temp_str, 20, "T: %4.2f C\0", temperature);
   oled.drawString(0,0, temp_str);
-  snprintf(press_str, 25, "Pressure: %6.2f hPa\0", pressure);
-  oled.drawString(0,8, press_str);
-  snprintf(humid_str, 25, "Rel. Humidity: %5.2f%%\0", humidity);
-  oled.drawString(0,16, humid_str);
-  snprintf(alt_str, 20, "Altitude: %5.0fM\0", altitude);
-  oled.drawString(0,24, alt_str);
+  snprintf(press_str, 25, "P: %6.2f hPa\0", pressure);
+  oled.drawString(0,16, press_str);
+  snprintf(humid_str, 25, "RH: %5.2f%%\0", humidity);
+  oled.drawString(0,32, humid_str);
+  snprintf(alt_str, 20, "Alt: %5.0fM\0", altitude);
+  oled.drawString(0,48, alt_str);
   oled.display();
 }
 
