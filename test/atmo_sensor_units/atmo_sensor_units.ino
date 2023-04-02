@@ -50,11 +50,21 @@ void setup()
       delay(100);
     }
   }
+  //setup the sensor for weather station scenario per datasheet section 3.5
+  //see the Adafruit library "advanced_settings" example
+  bme.setSampling(
+                  Adafruit_BME280::MODE_FORCED,
+                  Adafruit_BME280::SAMPLING_X1, // temperature
+                  Adafruit_BME280::SAMPLING_X1, // pressure
+                  Adafruit_BME280::SAMPLING_X1, // humidity
+                  Adafruit_BME280::FILTER_OFF
+                 );
 }
 
 
 void loop() 
 {
+  bme.takeForcedMeasurement();
   temperature = ( (bme.readTemperature() * 1.8F) + 32 );
   pressure = (bme.readPressure() / 3386.0F);
   humidity = bme.readHumidity();
@@ -64,14 +74,14 @@ void loop()
   #endif
   oled_display();
 
-  delay(1000);
+  delay(60000);
 }
 
 void oled_display()
 {
   oled.clear();
   
-  snprintf(temp_str, 20, "T: %4.2f F\0", temperature);
+  snprintf(temp_str, 20, "T: %4.2f °F\0", temperature);
   oled.drawString(0,0, temp_str);
   snprintf(press_str, 20, "P: %6.2f inHg\0", pressure);
   oled.drawString(0,16, press_str);

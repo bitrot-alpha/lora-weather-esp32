@@ -24,8 +24,8 @@ float humidity = 0.0F;
 float altitude = 0.0F;
 
 char temp_str[20] = "";
-char press_str[25] = "";
-char humid_str[25] = "";
+char press_str[20] = "";
+char humid_str[20] = "";
 char alt_str[20] = "";
 
 void setup()
@@ -48,11 +48,21 @@ void setup()
         delay(100);
       }
   }
+  //setup the sensor for weather station scenario per datasheet section 3.5
+  //see the Adafruit library "advanced_settings" example
+  bme.setSampling(
+                  Adafruit_BME280::MODE_FORCED,
+                  Adafruit_BME280::SAMPLING_X1, // temperature
+                  Adafruit_BME280::SAMPLING_X1, // pressure
+                  Adafruit_BME280::SAMPLING_X1, // humidity
+                  Adafruit_BME280::FILTER_OFF
+                 );
 }
 
 
 void loop() 
 { 
+  bme.takeForcedMeasurement();
   temperature = bme.readTemperature();
   pressure = (bme.readPressure() / 100.0F);
   humidity = bme.readHumidity();
@@ -60,18 +70,18 @@ void loop()
   printValues();
   oled_display();
   
-  delay(1000);
+  delay(60000);
 }
 
 void oled_display()
 {
   oled.clear();
 
-  snprintf(temp_str, 20, "T: %4.2f C\0", temperature);
+  snprintf(temp_str, 20, "T: %4.2f °C\0", temperature);
   oled.drawString(0,0, temp_str);
-  snprintf(press_str, 25, "P: %6.2f hPa\0", pressure);
+  snprintf(press_str, 20, "P: %6.2f hPa\0", pressure);
   oled.drawString(0,16, press_str);
-  snprintf(humid_str, 25, "RH: %5.2f%%\0", humidity);
+  snprintf(humid_str, 20, "RH: %5.2f%%\0", humidity);
   oled.drawString(0,32, humid_str);
   snprintf(alt_str, 20, "Alt: %5.0fM\0", altitude);
   oled.drawString(0,48, alt_str);
