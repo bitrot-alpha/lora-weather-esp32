@@ -75,15 +75,15 @@ void printValues()
 {
     Serial.print("Temperature = ");
     Serial.print(temperature);
-    Serial.println(" °C");
+    Serial.println(" °F");
 
     Serial.print("Pressure = ");
     Serial.print(pressure);
-    Serial.println(" hPa");
+    Serial.println(" inHg");
 
     Serial.print("Approx. Altitude = ");
     Serial.print(altitude);
-    Serial.println(" m");
+    Serial.println(" ft");
 
     Serial.print("Humidity = ");
     Serial.print(humidity);
