@@ -122,9 +122,9 @@ void loop()
     heading_raw = getADCValue();
 
     snprintf(revcount_str, 20, "Revs: %3u\0", (windRevs / BOUNCE_COMPENSATION) );
-    snprintf(windmph_str, 20, "Wind MPH: %4.2f\0", get_wind_speed() );
-    snprintf(heading_str, 20, "Heading: %s\0", determineHeading(heading_raw) );
+    snprintf(windmph_str, 20, "Wind MPH: %3.1f\0", get_wind_speed() );
     snprintf(adc_val, 20, "ADC Value: %5d\0", heading_raw);
+    snprintf(heading_str, 20, "Heading: %s\0", determineHeading(heading_raw) );
 
     oled.clear();
     oled.drawString(0, 0, revcount_str);
