@@ -8,7 +8,12 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
-#define SEALEVELPRESSURE_HPA (1013.25)
+//replace this value with the given sea level pressure at your location
+//example: https://metar-taf.com/KLAX -- scroll down to "Remarks" section and look for "sea level pressure"
+#define SEALEVELPRESSURE_HPA (1017.8)
+
+//serial debug output
+//#define USING_SERIAL
 
 SSD1306Wire oled(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED); // addr , freq , i2c group , resolution , rst
 Adafruit_BME280 bme;
@@ -25,39 +30,43 @@ char alt_str[20] = "";
 
 void setup()
 {
-    Serial.begin(115200);
-    Wire1.begin(39, 40);
-    oled.init();
-    oled.clear();
-    oled.setFont(ArialMT_Plain_16);
-    //wait for serial
-    while(!Serial);
+  #ifdef USING_SERIAL
+  Serial.begin(115200);
+  //wait for serial
+  while(!Serial);
+  #endif
+  Wire1.begin(39, 40);
+  oled.init();
+  oled.clear();
+  oled.setFont(ArialMT_Plain_16);
 
-    if (!bme.begin(0x76, &Wire1) ) 
-    {
-        Serial.print("BME280 not found. Check wiring!\n");
-        while(true)
-        {
-          delay(100);
-        }
-    }
+  if (!bme.begin(0x76, &Wire1) ) 
+  {
+      Serial.print("BME280 not found. Check wiring!\n");
+      while(true)
+      {
+        delay(100);
+      }
+  }
 }
 
 
 void loop() 
 { 
-    temperature = bme.readTemperature();
-    pressure = (bme.readPressure() / 100.0F);
-    humidity = bme.readHumidity();
-    altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-    printValues();
-    oled_display();
-    delay(1000);
+  temperature = bme.readTemperature();
+  pressure = (bme.readPressure() / 100.0F);
+  humidity = bme.readHumidity();
+  altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+  printValues();
+  oled_display();
+  
+  delay(1000);
 }
 
 void oled_display()
 {
   oled.clear();
+
   snprintf(temp_str, 20, "T: %4.2f C\0", temperature);
   oled.drawString(0,0, temp_str);
   snprintf(press_str, 25, "P: %6.2f hPa\0", pressure);
@@ -66,26 +75,27 @@ void oled_display()
   oled.drawString(0,32, humid_str);
   snprintf(alt_str, 20, "Alt: %5.0fM\0", altitude);
   oled.drawString(0,48, alt_str);
+
   oled.display();
 }
 
 void printValues() 
 {
-    Serial.print("Temperature = ");
-    Serial.print(temperature);
-    Serial.println(" °C");
+  Serial.print("Temperature = ");
+  Serial.print(temperature);
+  Serial.println(" °C");
 
-    Serial.print("Pressure = ");
-    Serial.print(pressure);
-    Serial.println(" hPa");
+  Serial.print("Pressure = ");
+  Serial.print(pressure);
+  Serial.println(" hPa");
 
-    Serial.print("Approx. Altitude = ");
-    Serial.print(altitude);
-    Serial.println(" m");
+  Serial.print("Approx. Altitude = ");
+  Serial.print(altitude);
+  Serial.println(" m");
 
-    Serial.print("Humidity = ");
-    Serial.print(humidity);
-    Serial.println(" %");
+  Serial.print("Humidity = ");
+  Serial.print(humidity);
+  Serial.println(" %");
 
-    Serial.println();
+  Serial.println();
 }
