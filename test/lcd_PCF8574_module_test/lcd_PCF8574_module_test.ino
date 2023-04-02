@@ -30,7 +30,7 @@ void setup() {
   while (!Serial)
     ;
 
-  Serial.println("Probing for PCF8574 on address 0x27...");
+  Serial.printf("Probing for PCF8574 on address %#3x...\n", I2C_ADDR);
 
   // See http://playground.arduino.cc/Main/I2cScanner how to test for a I2C device.
   Wire1.begin(SDA_PIN, SCK_PIN);
