@@ -26,7 +26,7 @@ void displayHeading()
   snprintf(adc_val, 20, "ADC Value: %5d\0", heading_raw);
   oled.drawString(0, 0, adc_val);
   snprintf(heading_str, 20, "Heading: %s\0", determineHeading(heading_raw) );
-  oled.drawString(0, 10, heading_str);
+  oled.drawString(0, 15, heading_str);
   oled.display();
 }
 
@@ -70,6 +70,7 @@ void setup()
 {
   oled.init();
   oled.clear();
+  oled.setFont(ArialMT_Plain_16);
   analogReadResolution(11);
   pinMode(2, ANALOG);
 }
