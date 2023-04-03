@@ -84,21 +84,23 @@ uint16_t getADCValue()
 const char * determineHeading(uint16_t adc_value)
 {
   //uses heading_map array, the if statements go in order from 0 to 7
-  if (adc_value >= 1520 && adc_value <= 1540)
+  //the headings go clockwise every 45 degrees from N (0 degrees) to NW (315 degrees)
+  //bounds are 5% either side of what the ADC value should be
+  if (adc_value >= 1454 && adc_value <= 1607)
     return heading_map[0];
-  if (adc_value >= 870 && adc_value <= 890)
+  if (adc_value >= 834 && adc_value <= 922)
     return heading_map[1];
-  if (adc_value >= 150 && adc_value <= 170)
+  if (adc_value >= 153 && adc_value <= 169)
     return heading_map[2];
-  if (adc_value >= 325 && adc_value <= 345)
+  if (adc_value >= 320 && adc_value <= 354)
     return heading_map[3];
-  if (adc_value >= 525 && adc_value <= 545)
+  if (adc_value >= 507 && adc_value <= 561)
     return heading_map[4];
-  if (adc_value >= 1200 && adc_value <= 1220)
+  if (adc_value >= 1151 && adc_value <= 1273)
     return heading_map[5];
-  if (adc_value >= 1955 && adc_value <= 1975)
+  if (adc_value >= 1867 && adc_value <= 2063)
     return heading_map[6];
-  if (adc_value >= 1775 && adc_value <= 1795)
+  if (adc_value >= 1695 && adc_value <= 1873)
     return heading_map[7];
 
   return heading_map[8];
