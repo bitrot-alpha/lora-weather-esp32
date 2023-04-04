@@ -5,8 +5,8 @@
 #include "Wire.h"
 #include <LiquidCrystal_PCF8574.h>
 
-const uint8_t SDA_PIN = 40;
-const uint8_t SCK_PIN = 39;
+const uint8_t SDA_PIN = 41;
+const uint8_t SCK_PIN = 42;
 const uint8_t I2C_ADDR = 0x27;
 
 LiquidCrystal_PCF8574 lcd(I2C_ADDR);
