@@ -1,0 +1,1 @@
+/home/arashi/gitrepos/lora-weather-esp32/test/lora_common/lora_data.h
