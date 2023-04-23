@@ -48,9 +48,10 @@ uint8_t degree_char[] =
 };
 
 char wind_str[21] = "";
-char temperature_str[21] = "";
-char humidity_str[21] = "";
+char temperature_str[13] = "";
+char humidity_str[11] = "";
 char pressure_str[21] = "";
+char update_str[21] = "";
 
 lora_packet_t receivedData =
 {
@@ -59,6 +60,7 @@ lora_packet_t receivedData =
 };
 
 long prevDisplayTime = 0;
+long lastUpdate = 0;
 
 const char * heading_map[9] = 
 {
@@ -73,7 +75,6 @@ const char * heading_map[9] =
 
 void setup()
 {
-  //memset( (void*)receivedData, 0, sizeof(lora_packet_t) );
   Serial.begin(115200);
   Wire1.begin(SDA_PIN, SCK_PIN);  // custom i2c port on ESP
   lcd.begin(20,4, Wire1);
@@ -102,25 +103,34 @@ void loop()
   long now = millis();
 
   //wait 1 second between outputs to display
-  if(now - prevDisplayTime > 1000)
+  if(now - prevDisplayTime > 10000)
   {
     prevDisplayTime = now;
     //use the width part of the format specifier well since we're not calling clear() every time
     snprintf(wind_str, 21, "Wind: %2s %4.1f MPH\0", heading_map[receivedData.wind_heading], receivedData.wind_speed);
-    snprintf(temperature_str, 21, "Temperature: %4.1f\01F\0", receivedData.temperature);
-    snprintf(humidity_str, 21, "Humidity: %5.1f%%\0", receivedData.humidity);
+    snprintf(temperature_str, 14, "Temp:%4.1f\01F\0", receivedData.temperature);
+    snprintf(humidity_str, 11, " Hum:%3.0f%%\0", receivedData.humidity);
     snprintf(pressure_str, 21, "Pressure: %4.2f inHg\0", receivedData.pressure);
 
     lcd.home();
     lcd.print(wind_str);
     lcd.setCursor(0,1);
     lcd.print(temperature_str);
-    lcd.setCursor(0,2);
+    //lcd.setCursor(0,2);
     lcd.print(humidity_str);
-    lcd.setCursor(0,3);
+    lcd.setCursor(0,2);
     lcd.print(pressure_str);
+    snprintf(update_str, 21, "Updated %4d sec ago\0", ( (now - lastUpdate) / 1000) );
+    lcd.setCursor(0,3);
+    lcd.print(update_str);
 
     Radio.Rx(0); //put the LoRa radio into receive mode
+  }
+  else if (now - prevDisplayTime > 1000)
+  {
+    snprintf(update_str, 21, "Updated %4d sec ago\0", ( (now - lastUpdate) / 1000) );
+    lcd.setCursor(0,3);
+    lcd.print(update_str);
   }
 
   Radio.IrqProcess(); //Wait for LoRa packet
@@ -128,6 +138,7 @@ void loop()
 
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
 {
+  lastUpdate = millis();
   memcpy( &receivedData, payload, sizeof(lora_packet_t) );
   Radio.Sleep();
   Serial.printf("\r\nreceived packet with rssi %d , length %d\r\n",rssi,size);
