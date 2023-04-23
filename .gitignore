@@ -2,4 +2,5 @@
 debug.cfg
 debug_custom.json
 *.svd
-
+## Private folder for WiFi credentials, API keys, etc
+private/
