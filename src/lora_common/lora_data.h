@@ -13,6 +13,7 @@ typedef struct LoraPacket
     float wind_speed;
     //BME280 stuff
     float temperature, humidity, pressure;
+    float rainfall;
 } lora_packet_t;
 
 #endif
