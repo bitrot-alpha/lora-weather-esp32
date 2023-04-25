@@ -5,29 +5,21 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <ESP32Time.h> //onboard rtc library
-#include "HT_SSD1306Wire.h"
-//wifi stuff
-#include "wifi_credentials.h"
-#include <NTPClient.h>
-#include <WiFi.h>
-#include <WiFiUdp.h>
-#include <lwip/inet.h>
+#include "HT_SSD1306Wire.h" //onboard OLED display
 
 //Sleep time (50 seconds)
 const unsigned int SLEEP_TIME = 50 * 1000000;
+
+//Values that are kept when sleeping and waking up
 RTC_DATA_ATTR uint16_t bootcycles = 0;
 RTC_DATA_ATTR unsigned long lastWakeup = 0;
 RTC_DATA_ATTR unsigned long lastWakeupMillis = 0;
 RTC_DATA_ATTR float raincount = 0.0F;
 
+//Use the onboard RTC to keep track of time
 ESP32Time rtc;
-//get the time from network
-//refresh every 3 hours
-//arg 3 is time offset (can use it for time zone) and arg 4 is refresh interval in milliseconds
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "north-america.pool.ntp.org", (-7 * 3600) );
 
-//LoRa setup section
+// **** LoRa setup section ****
 #define RF_FREQUENCY                915000000 // Hz
 #define TX_OUTPUT_POWER             14        // dBm
 #define LORA_BANDWIDTH              0         // [0: 125 kHz, //  1: 250 kHz,
@@ -40,8 +32,6 @@ NTPClient timeClient(ntpUDP, "north-america.pool.ntp.org", (-7 * 3600) );
 #define LORA_FIX_LENGTH_PAYLOAD_ON  false
 #define LORA_IQ_INVERSION_ON        false
 
-//#define RX_TIMEOUT_VALUE            1000
-
 lora_packet_t dataPacket = 
 {
   //dummy values for testing
@@ -51,10 +41,13 @@ lora_packet_t dataPacket =
 static RadioEvents_t RadioEvents;
 void OnTxDone( void );
 void OnTxTimeout( void );
+// ****** END LoRa Setup ******
 
 // **** SENSORS SECTION ****
-
 Adafruit_BME280 bme;
+// calibrate the pressure value using an offset
+// as demonstrated in this video: https://www.youtube.com/watch?v=Wq-Kb7D8eQ4
+const float PRESSURE_OFFSET = 142.65F * 100.0F;
 //anemometer pin
 const uint8_t WIND_SPD_PIN = 4;
 //wind heading pin
@@ -75,10 +68,10 @@ volatile uint8_t windRevs = 0;
 volatile long raintime = 0;
 long raininterval = 0;
 long rainlast;
-// **** END SENSORS SECTION ****
+// ****** END SENSORS SECTION ******
 
 // onboard OLED display
-SSD1306Wire oled(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED);
+// SSD1306Wire oled(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED);
 
 void wind_spd_IRQ()
 {
@@ -203,35 +196,6 @@ void setup()
 {
   //increment our boot counter
   bootcycles++;
-  /*
-  //first boot, set the RTC from WiFi
-  if (bootcycles == 1)
-  {
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    oled.init();
-    oled.setFont(ArialMT_Plain_16);
-    const char not_connected[] = "No Wifi!\0";
-    while(WiFi.status() != WL_CONNECTED)
-    {
-      oled.clear();
-      oled.drawString(0, 0, not_connected);
-      oled.display();
-    }
-    
-    timeClient.begin();
-    timeClient.forceUpdate();
-    
-    rtc.setTime( timeClient.getEpochTime() );
-    
-    WiFi.disconnect(true);
-    
-    oled.clear();
-    const char connected[] = "Set time from WiFi\0";
-    oled.drawString(0, 0, connected);
-    delay(5000);
-    oled.displayOff();
-  }
-  */
 
   //reset rain count every 24 hours-ish
   if ( bootcycles > (24 * 60) )
@@ -295,9 +259,10 @@ void setup()
 
   // **** MAIN SECTION ****
   //bme measure
+  //measurements are converted to US/Imperial units
   bme.takeForcedMeasurement();
   dataPacket.temperature = ( (bme.readTemperature() * 1.8F) + 32 );
-  dataPacket.pressure = (bme.readPressure() / 3386.0F);
+  dataPacket.pressure = ( (bme.readPressure() + PRESSURE_OFFSET) / 3386.0F);
   dataPacket.humidity = bme.readHumidity();
 
   //wind stuff
