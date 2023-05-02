@@ -187,4 +187,10 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
   memcpy( &receivedData, payload, sizeof(lora_packet_t) );
   Radio.Sleep();
   Serial.printf("\r\nreceived packet with rssi %d , length %d\r\n",rssi,size);
+  
+  Serial.printf("Wind: %2s %4.1f MPH\n\r", heading_map[receivedData.wind_heading], receivedData.wind_speed);
+  Serial.printf("Temp:%4.1f F", receivedData.temperature);
+  Serial.printf(" Hum:%3.0f%%\n\r", receivedData.humidity);
+  Serial.printf("Pressure:%4.2f inHg\n\r", receivedData.pressure);
+  Serial.printf("Rain:%05.3fin\n\r", receivedData.rainfall);
 }
