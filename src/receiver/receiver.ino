@@ -30,7 +30,7 @@
 #define LORA_IQ_INVERSION_ON        false
 
 #define RX_TIMEOUT_VALUE            1000
-//const uint8_t BUFFER_SIZE = sizeof(lora_packet_t);
+const uint16_t STATION_KEY = 0xF00D;
 
 static RadioEvents_t RadioEvents;
 //END LoRa setup section
@@ -139,16 +139,15 @@ void loop()
     snprintf(temperature_str, 14, "Temp:%4.1f\01F\0", receivedData.temperature);
     snprintf(humidity_str, 11, " Hum:%3.0f%%\0", receivedData.humidity);
     snprintf(pressure_str, 21, "Pressure:%4.2f inHg\0", receivedData.pressure);
+    snprintf(update_str, 21, "Rain:%03.2fin %3ds ago\0", receivedData.rainfall, ( (now - lastUpdate) / 1000) );
 
     lcd.home();
     lcd.print(wind_str);
     lcd.setCursor(0,1);
     lcd.print(temperature_str);
-    //lcd.setCursor(0,2);
     lcd.print(humidity_str);
     lcd.setCursor(0,2);
     lcd.print(pressure_str);
-    snprintf(update_str, 21, "Rain:%02.1fin %4ds ago\0", receivedData.rainfall, ( (now - lastUpdate) / 1000) );
     lcd.setCursor(0,3);
     lcd.print(update_str);
 
@@ -183,14 +182,31 @@ void loop()
 
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
 {
-  lastUpdate = millis();
-  memcpy( &receivedData, payload, sizeof(lora_packet_t) );
-  Radio.Sleep();
   Serial.printf("\r\nreceived packet with rssi %d , length %d\r\n",rssi,size);
-  
-  Serial.printf("Wind: %2s %4.1f MPH\n\r", heading_map[receivedData.wind_heading], receivedData.wind_speed);
-  Serial.printf("Temp:%4.1f F", receivedData.temperature);
-  Serial.printf(" Hum:%3.0f%%\n\r", receivedData.humidity);
-  Serial.printf("Pressure:%4.2f inHg\n\r", receivedData.pressure);
-  Serial.printf("Rain:%05.3fin\n\r", receivedData.rainfall);
+
+  //dumb pointer trick to save memory
+  lora_packet_t* temp = (lora_packet_t*)(void*) payload;
+
+  if(size == sizeof(lora_packet_t))
+  {
+    if( temp->station_key == STATION_KEY )
+    {
+      lastUpdate = millis();
+      memcpy( &receivedData, payload, sizeof(lora_packet_t) );
+      Serial.printf("Wind: %2s %4.1f MPH\n\r", heading_map[receivedData.wind_heading], receivedData.wind_speed);
+      Serial.printf("Temp:%4.1f F", receivedData.temperature);
+      Serial.printf(" Hum:%3.0f%%\n\r", receivedData.humidity);
+      Serial.printf("Pressure:%4.2f inHg\n\r", receivedData.pressure);
+      Serial.printf("Rain:%05.3fin\n\r", receivedData.rainfall);
+    }
+    else
+    {
+      Serial.printf("Wrong key!\r\n");
+    }
+  }
+  else
+  {
+    Serial.printf("Not data from weather station\r\n");
+  }
+  Radio.Sleep();
 }

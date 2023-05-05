@@ -32,10 +32,13 @@ ESP32Time rtc;
 #define LORA_FIX_LENGTH_PAYLOAD_ON  false
 #define LORA_IQ_INVERSION_ON        false
 
+//Set this to be the same on both base station and receivers
+uint16_t STATION_KEY = 0xF00D;
+
 lora_packet_t dataPacket = 
 {
   //dummy values for testing
-  5, 5.5F, 81.4F, 70.5F, 25.83F
+  //0xF00D, 5, 5.5F, 81.4F, 70.5F, 25.83F
 };
 
 static RadioEvents_t RadioEvents;
@@ -45,6 +48,9 @@ void OnTxTimeout( void );
 
 // **** SENSORS SECTION ****
 Adafruit_BME280 bme;
+const uint8_t BME_SDA_PIN = 39;
+const uint8_t BME_SCK_PIN = 40;
+const uint8_t BME_ADDRESS = 0x76;
 // calibrate the pressure value using an offset
 // as demonstrated in this video: https://www.youtube.com/watch?v=Wq-Kb7D8eQ4
 const float PRESSURE_OFFSET = 142.65F * 100.0F;
@@ -67,7 +73,7 @@ volatile uint8_t windRevs = 0;
 
 volatile long raintime = 0;
 long raininterval = 0;
-long rainlast;
+long rainlast = 0;
 // ****** END SENSORS SECTION ******
 
 // onboard OLED display
@@ -236,8 +242,8 @@ void setup()
   attachInterrupt(RAIN_GAUGE_PIN, rainIRQ, FALLING);
 
   //BME280 setup
-  Wire1.begin(39, 40);
-  if (!bme.begin(0x76, &Wire1) ) 
+  Wire1.begin(BME_SDA_PIN, BME_SCK_PIN);
+  if (!bme.begin(BME_ADDRESS, &Wire1) ) 
   {
     Serial.print("BME280 not found. Check wiring!\n");
     while(true)
@@ -258,6 +264,7 @@ void setup()
   delay(10000);
 
   // **** MAIN SECTION ****
+  dataPacket.station_key = STATION_KEY;
   //bme measure
   //measurements are converted to US/Imperial units
   bme.takeForcedMeasurement();

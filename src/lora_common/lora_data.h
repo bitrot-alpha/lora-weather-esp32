@@ -8,6 +8,8 @@
 
 typedef struct LoraPacket
 {
+    //station key
+    uint16_t station_key;
     //anemometer stuff
     uint8_t wind_heading;
     float wind_speed;
