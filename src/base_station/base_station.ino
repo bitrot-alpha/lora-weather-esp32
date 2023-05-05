@@ -1,3 +1,9 @@
+// Author: Bitrot_alpha, nseidle
+// Weather Station and LoRa transmitter
+//    Much of the wind and rain sensor code is based off of nseidle's project
+//    located at https://github.com/sparkfun/Wimp_Weather_Station
+//    Buy Nate a beer if you see him ("beerware license")
+
 #include "LoRaWan_APP.h"
 #include "Arduino.h"
 #include "lora_data.h"
@@ -144,7 +150,7 @@ const uint8_t determineHeading(uint16_t adc_value)
 
 void rainIRQ()
 // Count rain gauge bucket tips as they occur
-// Activated by the magnet and reed switch in the rain gauge, attached to input D2
+// Activated by the magnet and reed switch in the rain gauge
 {
 	raintime = millis(); // grab current time
 	raininterval = raintime - rainlast; // calculate interval between this and last event

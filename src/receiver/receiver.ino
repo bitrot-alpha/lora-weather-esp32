@@ -1,7 +1,7 @@
 // Author: Bitrot_alpha
-// lora receive test
+// Weather station receiver
 // prints out data from LoRa to 2004A LCD
-// obviously this pairs with lora send on another device
+// Pairs with base_station to display weather data
 
 #include "Arduino.h"
 #include "LoRaWan_APP.h"
@@ -67,7 +67,7 @@ char ip_str[21] = "";
 lora_packet_t receivedData =
 {
   //dummy values for testing
-  //3, 5.5F, 75.3F, 26.3F, 25.83F, 0.422F
+  //0xF00D, 3, 5.5F, 75.3F, 26.3F, 25.83F, 0.422F
 };
 
 long prevDisplayTime = 0;
@@ -81,8 +81,6 @@ const char * heading_map[9] =
   "W\0", "NW\0",
   "X\0"  
 };
-
-//bool lora_idle = true;
 
 //get the time from network
 //refresh every 3 hours
@@ -180,6 +178,7 @@ void loop()
   Radio.IrqProcess(); //Wait for LoRa packet
 }
 
+//lora receive function
 void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
 {
   Serial.printf("\r\nreceived packet with rssi %d , length %d\r\n",rssi,size);
@@ -187,6 +186,8 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
   //dumb pointer trick to save memory
   lora_packet_t* temp = (lora_packet_t*)(void*) payload;
 
+  //check that what we received is from our weather station
+  //only update values if it is
   if(size == sizeof(lora_packet_t))
   {
     if( temp->station_key == STATION_KEY )
