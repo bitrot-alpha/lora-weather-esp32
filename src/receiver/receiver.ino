@@ -16,6 +16,8 @@
 #include <WiFiUdp.h>
 #include <lwip/inet.h>
 
+#define HOSTNAME "LoRa Weather Receiver"
+
 //LoRa setup section
 #define RF_FREQUENCY                915000000 // Hz
 #define TX_OUTPUT_POWER             14        // dBm
@@ -114,6 +116,7 @@ void setup()
   oled.clear();
   oled.screenRotate(ANGLE_180_DEGREE);
   oled.setFont(ArialMT_Plain_16);
+  WiFi.setHostname(HOSTNAME);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   //wait 5 seconds for WiFi
   delay(5000);
