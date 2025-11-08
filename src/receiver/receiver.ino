@@ -16,7 +16,7 @@
 #include <WiFiUdp.h>
 #include <lwip/inet.h>
 
-#define HOSTNAME "LoRa Weather Receiver"
+#define HOSTNAME "WeatherStation"
 
 //LoRa setup section
 #define RF_FREQUENCY                915000000 // Hz
@@ -103,7 +103,7 @@ void setup()
   lcd.clear();
 
   //lora init section
-  Mcu.begin();
+  Mcu.begin(WIFI_LORA_32_V3,SLOW_CLK_TPYE);
   RadioEvents.RxDone = OnRxDone;
   Radio.Init( &RadioEvents );
   Radio.SetChannel( RF_FREQUENCY );
@@ -129,7 +129,7 @@ void setup()
 
 void loop()
 {
-  long now = millis();
+  unsigned long now = millis();
 
   //wait 1 second between outputs to display
   if(now - prevDisplayTime > 1000)

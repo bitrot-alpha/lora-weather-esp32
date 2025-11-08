@@ -36,7 +36,7 @@ Wind Speed, Wind Direction, and Rain Gauge kit - Available from [Argent Data][ar
 [Matthias Hertel's PCF8574 LCD library][lcd library]  
 
 [arduino]: https://www.arduino.cc/en/software
-[heltec library]: https://docs.heltec.org/en/node/esp32/quick_start.html
+[heltec library]: https://docs.heltec.org/en/node/esp32/esp32_general_docs/quick_start.html 
 [heltec library fix]: https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/issues/159
 [esptool git]: https://github.com/espressif/esptool/releases/latest
 [adafruit bme280 library]: https://learn.adafruit.com/adafruit-bme280-humidity-barometric-pressure-temperature-sensor-breakout/arduino-test
