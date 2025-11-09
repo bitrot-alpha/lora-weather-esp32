@@ -59,7 +59,10 @@ const uint8_t BME_SCK_PIN = 40;
 const uint8_t BME_ADDRESS = 0x76;
 // calibrate the pressure value using an offset
 // as demonstrated in this video: https://www.youtube.com/watch?v=Wq-Kb7D8eQ4
-const float PRESSURE_OFFSET = 142.65F * 100.0F;
+const float PRESSURE_OFFSET = 46.34F * 100.0F;
+//un-comment to get serial readout of barometer
+//#define CAL_BAROMETER
+
 //anemometer pin
 const uint8_t WIND_SPD_PIN = 4;
 //wind heading pin
@@ -228,7 +231,7 @@ void setup()
   Serial.begin(115200);
   print_wakeup_reason();
   //lora setup stuff
-  Mcu.begin();
+  Mcu.begin(WIFI_LORA_32_V3,SLOW_CLK_TPYE);
 
   RadioEvents.TxDone = OnTxDone;
   RadioEvents.TxTimeout = OnTxTimeout;
@@ -286,10 +289,15 @@ void setup()
   dataPacket.rainfall = raincount;
 
 	Serial.printf("\r\nsending packet\r\n");
+  #ifdef CAL_BAROMETER
+  Serial.printf("Barometer reading: %.2f hPa\r\n", dataPacket.pressure * 33.86F);
+  Serial.printf("Offset: %.2f\r\n", PRESSURE_OFFSET * 0.01F);
+  #endif
   Radio.Send( (uint8_t *) &dataPacket, sizeof(dataPacket) ); //send the package out
   Radio.IrqProcess();
   delay(100);
   Serial.printf("Processing done. Going to sleep now.\r\n");
+  Serial.flush();
   Radio.Sleep();
 
   //set our last wakeup times
