@@ -216,7 +216,7 @@ void loop()
     snprintf(temperature_str, 14, "Temp:%5.1f\02\0", receivedData.temperature);
     snprintf(humidity_str, 11, " Hum:%3.0f%%\0", receivedData.humidity);
     snprintf(pressure_str, 21, "Prs:%5.2f\04\05 %2d:%02dago\0", receivedData.pressure, upd_min, upd_sec);
-    snprintf(rainfall_str, 21, "Rain:%5.2f\04 last XXh\0", receivedData.rainfall);
+    snprintf(rainfall_str, 21, "Rain:%5.2f\04 last %2dh\0", receivedData.rainfall, receivedData.hours_up);
 
     lcd.home();
     lcd.print(wind_str);

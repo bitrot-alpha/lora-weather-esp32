@@ -15,6 +15,8 @@
 
 //Sleep time (50 seconds)
 const unsigned int SLEEP_TIME = 50 * 1000000;
+//Number of hours to keep persistent data like rainfall before resetting
+const unsigned int RESET_MAX = 48;
 
 //Values that are kept when sleeping and waking up
 RTC_DATA_ATTR uint16_t bootcycles = 0;
@@ -212,8 +214,8 @@ void setup()
   //increment our boot counter
   bootcycles++;
 
-  //reset rain count every 24 hours-ish
-  if ( bootcycles > (24 * 60) )
+  //reset rain count every RESET_MAX hours-ish
+  if ( bootcycles > (RESET_MAX * 60) )
   {
     bootcycles = 0;
     raincount = 0.0F;
@@ -274,6 +276,7 @@ void setup()
 
   // **** MAIN SECTION ****
   dataPacket.station_key = STATION_KEY;
+  dataPacket.hours_up = bootcycles / 60;
   //bme measure
   //measurements are converted to US/Imperial units
   bme.takeForcedMeasurement();

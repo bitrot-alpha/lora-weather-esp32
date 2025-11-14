@@ -17,7 +17,7 @@ typedef struct LoraPacket
     float temperature, humidity, pressure;
     float rainfall;
     //how many hours since reset
-    //unsigned int hours_up;
+    uint16_t hours_up;
 } lora_packet_t;
 
 #endif
