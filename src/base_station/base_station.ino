@@ -10,6 +10,7 @@
 #include "Wire.h"
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <Adafruit_SHT31.h>
 #include <ESP32Time.h> //onboard rtc library
 #include "HT_SSD1306Wire.h" //onboard OLED display
 
@@ -55,15 +56,20 @@ void OnTxTimeout( void );
 // ****** END LoRa Setup ******
 
 // **** SENSORS SECTION ****
+//un-comment to get serial readout of barometer
+//#define CAL_BAROMETER
+//comment out to keep SI units instead of converting to US customary
+#define CONV_IMPERIAL
+
 Adafruit_BME280 bme;
-const uint8_t BME_SDA_PIN = 39;
-const uint8_t BME_SCK_PIN = 40;
+Adafruit_SHT31 sht = Adafruit_SHT31(&Wire1);
+const uint8_t SDA_PIN = 39;
+const uint8_t SCK_PIN = 40;
 const uint8_t BME_ADDRESS = 0x76;
+const uint8_t SHT_ADDRESS = 0x44;
 // calibrate the pressure value using an offset
 // as demonstrated in this video: https://www.youtube.com/watch?v=Wq-Kb7D8eQ4
 const float PRESSURE_OFFSET = 46.34F * 100.0F;
-//un-comment to get serial readout of barometer
-//#define CAL_BAROMETER
 
 //anemometer pin
 const uint8_t WIND_SPD_PIN = 4;
@@ -95,7 +101,7 @@ void wind_spd_IRQ()
   if (millis() - lastWindIRQ > 10) // Ignore switch-bounce glitches less than 10ms (142MPH max reading) after the reed switch closes
 	{
 		lastWindIRQ = millis(); //Grab the current time
-		windRevs++; //There is 1.492MPH for each click per second.
+		windRevs++; //There is 1.492MPH (2.4 km/h) for each click per second.
 	}
 }
 
@@ -110,7 +116,11 @@ float get_wind_speed()
 	windRevs = 0; //Reset and start watching for new wind
 	lastWindCheck = millis();
 
-	windSpeed *= 1.492;
+  #ifdef CONV_IMPERIAL
+  windSpeed *= 1.492;
+  #else
+  windSpeed *= 2.4;
+  #endif
 
 	return(windSpeed);
 }
@@ -162,7 +172,11 @@ void rainIRQ()
 
 	if (raininterval > 10) // ignore switch-bounce glitches less than 10mS after initial edge
 	{
-		raincount += 0.011; //Each dump is 0.011" of water
+    #ifdef CONV_IMPERIAL
+    raincount += 0.011; //Each dump is 0.011" of water
+    #else
+    raincount += 0.2794; //Each dump is 0.2794mm of water
+    #endif
 
 		rainlast = raintime; // set up for next event
 	}
@@ -223,8 +237,13 @@ void setup()
 
   if(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0)
   {
+    #ifdef CONV_IMPERIAL
     if (rtc.getMillis() - lastWakeupMillis > 10)
       raincount += 0.011;
+    #else
+    if (rtc.getMillis() - lastWakeupMillis > 10)
+      raincount += 0.2794;
+    #endif
     //record our last wakeup time
     lastWakeup = rtc.getEpoch();
     lastWakeupMillis = rtc.getMillis();
@@ -252,8 +271,8 @@ void setup()
   attachInterrupt(WIND_SPD_PIN, wind_spd_IRQ, FALLING);
   attachInterrupt(RAIN_GAUGE_PIN, rainIRQ, FALLING);
 
-  //BME280 setup
-  Wire1.begin(BME_SDA_PIN, BME_SCK_PIN);
+  //I2C sensors setup
+  Wire1.begin(SDA_PIN, SCK_PIN);
   if (!bme.begin(BME_ADDRESS, &Wire1) ) 
   {
     Serial.print("BME280 not found. Check wiring!\n");
@@ -262,13 +281,17 @@ void setup()
       delay(100);
     }
   }
+  if (!sht.begin(SHT_ADDRESS) )
+  {
+    Serial.print("SHT31 not found. Check wiring!\n");
+  }
   //setup the sensor for weather station scenario per datasheet section 3.5
   //see the Adafruit library "advanced_settings" example
   bme.setSampling(
                   Adafruit_BME280::MODE_FORCED,
                   Adafruit_BME280::SAMPLING_X1, // temperature
                   Adafruit_BME280::SAMPLING_X1, // pressure
-                  Adafruit_BME280::SAMPLING_X1, // humidity
+                  Adafruit_BME280::SAMPLING_NONE, // humidity
                   Adafruit_BME280::FILTER_OFF
                  );
   //wait for 10 seconds to gather wind data
@@ -282,7 +305,8 @@ void setup()
   bme.takeForcedMeasurement();
   dataPacket.temperature = ( (bme.readTemperature() * 1.8F) + 32 );
   dataPacket.pressure = ( (bme.readPressure() + PRESSURE_OFFSET) / 3386.0F);
-  dataPacket.humidity = bme.readHumidity();
+  //dataPacket.humidity = bme.readHumidity();
+  datapacket.humidity = sht.readHumidity();
 
   //wind stuff
   heading_raw = getADCValue();
