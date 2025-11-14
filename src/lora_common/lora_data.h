@@ -16,6 +16,8 @@ typedef struct LoraPacket
     //BME280 stuff
     float temperature, humidity, pressure;
     float rainfall;
+    //how many hours since reset
+    //unsigned int hours_up;
 } lora_packet_t;
 
 #endif
