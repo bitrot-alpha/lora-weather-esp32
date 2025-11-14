@@ -19,6 +19,8 @@
 //#define USE_WPS
 //use OLED
 //#define OLED_ENABLED
+//SI/US customary units toggle, comment out to use SI units
+#define USE_IMPERIAL
 
 #ifndef USE_WPS
   #include "wifi_credentials.h"
@@ -112,6 +114,28 @@ uint8_t hg_char[] =
   0b00001,
   0b00111
 };
+uint8_t mm_char[] =
+{
+  0b00000,
+  0b11110,
+  0b10101,
+  0b10101,
+  0b00000,
+  0b11110,
+  0b10101,
+  0b10101
+};
+uint8_t hpa_char[] =
+{
+  0b10000,
+  0b11100,
+  0b10100,
+  0b00000,
+  0b11000,
+  0b11010,
+  0b10101,
+  0b10011
+};
 
 char wind_str[21] = "";
 char temperature_str[13] = "";
@@ -159,6 +183,8 @@ void setup()
   lcd.createChar(3, deg_c_char);  // degC character for LCD
   lcd.createChar(4, in_char);     // in character for LCD
   lcd.createChar(5, hg_char);     // Hg character for LCD
+  lcd.createChar(6, mm_char);     // mm character for LCD
+  lcd.createChar(7, hpa_char);     // hPa character for LCD
   lcd.setBacklight(255);
   //reset LCD
   //don't call clear() every refresh to avoid flashing
@@ -211,12 +237,21 @@ void loop()
     upd_sec = raw_sec % 60;
     upd_min = (raw_sec / 60) % 60;
 
+    #ifdef USE_IMPERIAL
     //use the width part of the format specifier well since we're not calling clear() every time
     snprintf(wind_str, 21, "Wind: %2s %4.1f MPH\0", heading_map[receivedData.wind_heading], receivedData.wind_speed);
     snprintf(temperature_str, 14, "Temp:%5.1f\02\0", receivedData.temperature);
     snprintf(humidity_str, 11, " Hum:%3.0f%%\0", receivedData.humidity);
     snprintf(pressure_str, 21, "Prs:%5.2f\04\05 %2d:%02dago\0", receivedData.pressure, upd_min, upd_sec);
     snprintf(rainfall_str, 21, "Rain:%5.2f\04 last %2dh\0", receivedData.rainfall, receivedData.hours_up);
+    #else
+    //use the width part of the format specifier well since we're not calling clear() every time
+    snprintf(wind_str, 21, "Wind: %2s %4.1f kph\0", heading_map[receivedData.wind_heading], receivedData.wind_speed);
+    snprintf(temperature_str, 14, "Temp:%5.1f\03\0", receivedData.temperature);
+    snprintf(humidity_str, 11, " Hum:%3.0f%%\0", receivedData.humidity);
+    snprintf(pressure_str, 21, "Prs:%5.2f\07 %2d:%02dago\0", receivedData.pressure, upd_min, upd_sec);
+    snprintf(rainfall_str, 21, "Rain:%4.0f\06 last %2dh\0", receivedData.rainfall, receivedData.hours_up);
+    #endif
 
     lcd.home();
     lcd.print(wind_str);
