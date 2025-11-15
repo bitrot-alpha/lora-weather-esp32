@@ -3,14 +3,18 @@
 //    Much of the wind and rain sensor code is based off of nseidle's project
 //    located at https://github.com/sparkfun/Wimp_Weather_Station
 //    Buy Nate a beer if you see him ("beerware license")
+//#define USE_OLD_VAL
 
 #include "LoRaWan_APP.h"
 #include "Arduino.h"
 #include "lora_data.h"
+#ifndef USE_OLD_VAL
+#include "adc_lut.h"
+#endif
 #include "Wire.h"
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
-#include <Adafruit_SHT31.h>
+//#include <Adafruit_SHT31.h>
 #include <ESP32Time.h> //onboard rtc library
 #include "HT_SSD1306Wire.h" //onboard OLED display
 
@@ -58,15 +62,17 @@ void OnTxTimeout( void );
 // **** SENSORS SECTION ****
 //un-comment to get serial readout of barometer
 //#define CAL_BAROMETER
+//un-comment to get serial readout of wind heading
+//#define WIND_DEBUG
 //comment out to keep SI units instead of converting to US customary
 #define CONV_IMPERIAL
 
 Adafruit_BME280 bme;
-Adafruit_SHT31 sht = Adafruit_SHT31(&Wire1);
+//Adafruit_SHT31 sht = Adafruit_SHT31(&Wire1);
 const uint8_t SDA_PIN = 39;
 const uint8_t SCK_PIN = 40;
 const uint8_t BME_ADDRESS = 0x76;
-const uint8_t SHT_ADDRESS = 0x44;
+//const uint8_t SHT_ADDRESS = 0x44;
 // calibrate the pressure value using an offset
 // as demonstrated in this video: https://www.youtube.com/watch?v=Wq-Kb7D8eQ4
 const float PRESSURE_OFFSET = 46.34F * 100.0F;
@@ -131,7 +137,11 @@ uint16_t getADCValue()
   uint16_t adc_value = 0;
   for (int i = 0; i < 16; i++) 
   {
+    #ifdef USE_OLD_VAL
     adc_value += analogRead(WIND_DIR_PIN);
+    #else
+    adc_value += ADC_LUT[analogRead(WIND_DIR_PIN)];
+    #endif
     delay(2);
   }
   adc_value /= 16;
@@ -140,7 +150,9 @@ uint16_t getADCValue()
 }
 
 const uint8_t determineHeading(uint16_t adc_value)
-{
+{ 
+  #ifdef USE_OLD_VAL
+  //OLD VALUES (uncalibrated)
   //the headings go clockwise every 45 degrees from N (0 degrees) to NW (315 degrees)
   //bounds are 5% either side of what the ADC value should be
   if (adc_value >= 1454 && adc_value <= 1607)
@@ -161,6 +173,45 @@ const uint8_t determineHeading(uint16_t adc_value)
     return 7;
 
   return 8;
+  #else
+
+  //headings go clockwise every 22.5 degrees from N (0 deg) to NNW (337.5 deg)
+  //bounds are plus minus 2%
+  if (adc_value >= 3034 && adc_value <= 3158)
+    return 0;
+  if (adc_value >= 1567 && adc_value <= 1631)
+    return 1;
+  if (adc_value >= 1781 && adc_value <= 1854)
+    return 2;
+  if (adc_value >= 323 && adc_value <= 337)
+    return 3;
+  if (adc_value >= 359 && adc_value <= 374)
+    return 4;
+  if (adc_value >= 254 && adc_value <= 265)
+    return 5;
+  if (adc_value >= 713 && adc_value <= 742)
+    return 6;
+  if (adc_value >= 489 && adc_value <= 508)
+    return 7;
+  if (adc_value >= 1109 && adc_value <= 1154)
+    return 8;
+  if (adc_value >= 945 && adc_value <= 983)
+    return 9;
+  if (adc_value >= 2433 && adc_value <= 2532)
+    return 10;
+  if (adc_value >= 2314 && adc_value <= 2409)
+    return 11;
+  if (adc_value >= 3649 && adc_value <= 3798)
+    return 12;
+  if (adc_value >= 3195 && adc_value <= 3325)
+    return 13;
+  if (adc_value >= 3425 && adc_value <= 3565)
+    return 14;
+  if (adc_value >= 2713 && adc_value <= 2824)
+    return 15;
+  
+  return 16;
+  #endif
 }
 
 void rainIRQ()
@@ -265,7 +316,7 @@ void setup()
                                   true, 0, 0, LORA_IQ_INVERSION_ON, 3000 );
   
   //setup wind sensors and rain gauge
-  analogReadResolution(11);
+  analogReadResolution(12);
   pinMode(WIND_DIR_PIN, ANALOG);
   pinMode(WIND_SPD_PIN, INPUT);
   attachInterrupt(WIND_SPD_PIN, wind_spd_IRQ, FALLING);
@@ -281,17 +332,17 @@ void setup()
       delay(100);
     }
   }
-  if (!sht.begin(SHT_ADDRESS) )
-  {
-    Serial.print("SHT31 not found. Check wiring!\n");
-  }
+  // if (!sht.begin(SHT_ADDRESS) )
+  // {
+  //   Serial.print("SHT31 not found. Check wiring!\n");
+  // }
   //setup the sensor for weather station scenario per datasheet section 3.5
   //see the Adafruit library "advanced_settings" example
   bme.setSampling(
                   Adafruit_BME280::MODE_FORCED,
                   Adafruit_BME280::SAMPLING_X1, // temperature
                   Adafruit_BME280::SAMPLING_X1, // pressure
-                  Adafruit_BME280::SAMPLING_NONE, // humidity
+                  Adafruit_BME280::SAMPLING_X1, // humidity
                   Adafruit_BME280::FILTER_OFF
                  );
   //wait for 10 seconds to gather wind data
@@ -305,13 +356,16 @@ void setup()
   bme.takeForcedMeasurement();
   dataPacket.temperature = ( (bme.readTemperature() * 1.8F) + 32 );
   dataPacket.pressure = ( (bme.readPressure() + PRESSURE_OFFSET) / 3386.0F);
-  //dataPacket.humidity = bme.readHumidity();
-  datapacket.humidity = sht.readHumidity();
+  dataPacket.humidity = bme.readHumidity();
+  //datapacket.humidity = sht.readHumidity();
 
   //wind stuff
   heading_raw = getADCValue();
   dataPacket.wind_speed = get_wind_speed();
   dataPacket.wind_heading = determineHeading(heading_raw);
+  #ifdef WIND_DEBUG
+  Serial.printf("ADC: %d Heading: %d\r\n", heading_raw, dataPacket.wind_heading);
+  #endif
   //rain gauge count
   dataPacket.rainfall = raincount;
 

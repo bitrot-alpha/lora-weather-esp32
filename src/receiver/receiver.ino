@@ -158,12 +158,12 @@ unsigned long raw_sec = 0;
 unsigned long upd_sec = 0;
 unsigned long upd_min = 0;
 
-const char * heading_map[9] = 
+const char * heading_map[] = 
 {
-  "N\0", "NE\0",
-  "E\0", "SE\0",
-  "S\0", "SW\0",
-  "W\0", "NW\0",
+  "N\0", "NNE\0", "NE\0", "ENE\0",
+  "E\0", "ESE\0", "SE\0", "SSE\0",
+  "S\0", "SSW\0", "SW\0", "WSW\0",
+  "W\0", "WNW\0", "NW\0", "NNW\0",
   "X\0"  
 };
 
@@ -239,14 +239,14 @@ void loop()
 
     #ifdef USE_IMPERIAL
     //use the width part of the format specifier well since we're not calling clear() every time
-    snprintf(wind_str, 21, "Wind: %2s %4.1f MPH\0", heading_map[receivedData.wind_heading], receivedData.wind_speed);
+    snprintf(wind_str, 21, "Wind: %3s %5.1f MPH\0", heading_map[receivedData.wind_heading], receivedData.wind_speed);
     snprintf(temperature_str, 14, "Temp:%5.1f\02\0", receivedData.temperature);
     snprintf(humidity_str, 11, " Hum:%3.0f%%\0", receivedData.humidity);
     snprintf(pressure_str, 21, "Prs:%5.2f\04\05 %2d:%02dago\0", receivedData.pressure, upd_min, upd_sec);
     snprintf(rainfall_str, 21, "Rain:%5.2f\04 last %2dh\0", receivedData.rainfall, receivedData.hours_up);
     #else
     //use the width part of the format specifier well since we're not calling clear() every time
-    snprintf(wind_str, 21, "Wind: %2s %4.1f kph\0", heading_map[receivedData.wind_heading], receivedData.wind_speed);
+    snprintf(wind_str, 21, "Wind: %3s %5.1f kph\0", heading_map[receivedData.wind_heading], receivedData.wind_speed);
     snprintf(temperature_str, 14, "Temp:%5.1f\03\0", receivedData.temperature);
     snprintf(humidity_str, 11, " Hum:%3.0f%%\0", receivedData.humidity);
     snprintf(pressure_str, 21, "Prs:%5.2f\07 %2d:%02dago\0", receivedData.pressure, upd_min, upd_sec);
