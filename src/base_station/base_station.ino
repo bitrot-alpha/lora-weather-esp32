@@ -5,18 +5,18 @@
 //    Buy Nate a beer if you see him ("beerware license")
 //#define USE_OLD_VAL
 
-#include "LoRaWan_APP.h"
-#include "Arduino.h"
+#include <Arduino.h>
+#include <LoRaWan_APP.h>
 #include "lora_data.h"
 #ifndef USE_OLD_VAL
 #include "adc_lut.h"
 #endif
-#include "Wire.h"
+#include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 //#include <Adafruit_SHT31.h>
 #include <ESP32Time.h> //onboard rtc library
-#include "HT_SSD1306Wire.h" //onboard OLED display
+//#include <HT_SSD1306Wire.h> //onboard OLED display
 
 //Sleep time (50 seconds)
 const unsigned int SLEEP_TIME = 50 * 1000000;
@@ -33,18 +33,6 @@ RTC_DATA_ATTR float raincount = 0.0F;
 ESP32Time rtc;
 
 // **** LoRa setup section ****
-#define RF_FREQUENCY                915000000 // Hz
-#define TX_OUTPUT_POWER             14        // dBm
-#define LORA_BANDWIDTH              0         // [0: 125 kHz, //  1: 250 kHz,
-                                              //  2: 500 kHz, //  3: Reserved]
-#define LORA_SPREADING_FACTOR       7         // [SF7..SF12]
-#define LORA_CODINGRATE             1         // [1: 4/5, //  2: 4/6,
-                                              //  3: 4/7, //  4: 4/8]
-#define LORA_PREAMBLE_LENGTH        8         // Same for Tx and Rx
-#define LORA_SYMBOL_TIMEOUT         0         // Symbols
-#define LORA_FIX_LENGTH_PAYLOAD_ON  false
-#define LORA_IQ_INVERSION_ON        false
-
 //Set this to be the same on both base station and receivers
 uint16_t STATION_KEY = 0xF00D;
 

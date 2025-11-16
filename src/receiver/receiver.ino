@@ -1,22 +1,30 @@
 // Author: Bitrot_alpha
 // Weather station receiver
 // prints out data from LoRa to 2004A LCD
+// NEW: data reporting (simple) on http server!
 // Pairs with base_station to display weather data
 
-#include "Arduino.h"
-#include "LoRaWan_APP.h"
-#include "Wire.h"
-#include "LiquidCrystal_PCF8574.h"
-#include "HT_SSD1306Wire.h"
+#include <Arduino.h>
+#include <LoRaWan_APP.h>
+#include <Wire.h>
+#include <LiquidCrystal_PCF8574.h>
+#include <HT_SSD1306Wire.h>
 #include "lora_data.h"
+#include "lcd_chars.h"
+#include <Preferences.h>
 //wifi stuff
 #include <NTPClient.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <lwip/inet.h>
+//webserver stuff
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <LittleFS.h>
+#include <ESPmDNS.h>
 
 //enable WPS or use hardcoded wifi credentials
-//#define USE_WPS
+#define USE_WPS
 //use OLED
 //#define OLED_ENABLED
 //SI/US customary units toggle, comment out to use SI units
@@ -28,24 +36,12 @@
   #include "esp_wps.h"
 #endif
 
-#define HOSTNAME "WeatherStation"
+const char HOSTNAME[] = "WeatherStation";
+const char MDNS_NAME[] = "weather-station";
 
 //LoRa setup section
-#define RF_FREQUENCY                915000000 // Hz
-#define TX_OUTPUT_POWER             14        // dBm
-#define LORA_BANDWIDTH              0         // [0: 125 kHz, //  1: 250 kHz,
-                                              //  2: 500 kHz, //  3: Reserved]
-#define LORA_SPREADING_FACTOR       7         // [SF7..SF12]
-#define LORA_CODINGRATE             1         // [1: 4/5, //  2: 4/6,
-                                              //  3: 4/7, //  4: 4/8]
-#define LORA_PREAMBLE_LENGTH        8         // Same for Tx and Rx
-#define LORA_SYMBOL_TIMEOUT         0         // Symbols
-#define LORA_FIX_LENGTH_PAYLOAD_ON  false
-#define LORA_IQ_INVERSION_ON        false
-
 #define RX_TIMEOUT_VALUE            1000
 const uint16_t STATION_KEY = 0xF00D;
-
 static RadioEvents_t RadioEvents;
 //END LoRa setup section
 
@@ -58,84 +54,6 @@ SSD1306Wire oled(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED);
 #endif
 
 LiquidCrystal_PCF8574 lcd(I2C_ADDR);
-//our custom degree character
-uint8_t degree_char[] =
-{
-  0b00111,
-  0b00101,
-  0b00111,
-  0b00000,
-  0b00000,
-  0b00000,
-  0b00000,
-  0b00000
-};
-uint8_t deg_f_char[] =
-{
-  0b11100,
-  0b10100,
-  0b11100,
-  0b00111,
-  0b00100,
-  0b00111,
-  0b00100,
-  0b00100
-};
-uint8_t deg_c_char[] =
-{
-  0b11100,
-  0b10100,
-  0b11100,
-  0b00000,
-  0b00111,
-  0b00100,
-  0b00100,
-  0b00111
-};
-uint8_t in_char[] =
-{
-  0b00000,
-  0b00000,
-  0b10000,
-  0b00111,
-  0b10101,
-  0b10101,
-  0b10101,
-  0b10101
-};
-uint8_t hg_char[] =
-{
-  0b10100,
-  0b11100,
-  0b10100,
-  0b00011,
-  0b00101,
-  0b00111,
-  0b00001,
-  0b00111
-};
-uint8_t mm_char[] =
-{
-  0b00000,
-  0b11110,
-  0b10101,
-  0b10101,
-  0b00000,
-  0b11110,
-  0b10101,
-  0b10101
-};
-uint8_t hpa_char[] =
-{
-  0b10000,
-  0b11100,
-  0b10100,
-  0b00000,
-  0b11000,
-  0b11010,
-  0b10101,
-  0b10011
-};
 
 char wind_str[21] = "";
 char temperature_str[13] = "";
@@ -145,7 +63,7 @@ char rainfall_str[21] = "";
 char oled_line1[21] = "";
 char oled_line2[21] = "";
 
-lora_packet_t receivedData =
+static lora_packet_t receivedData =
 {
   //dummy values for testing
   //0xF00D, 3, 5.5F, 75.3F, 26.3F, 25.83F, 0.422F
@@ -173,18 +91,24 @@ const char * heading_map[] =
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "north-america.pool.ntp.org", (-7 * 3600), ( (3 * 3600 * 1000) + 1000) );
 
+Preferences savedData;
+//web server stuff
+AsyncWebServer server(80);
+
 void setup()
 {
+  savedData.begin("wifidata", false);
   Serial.begin(115200);
+  LittleFS.begin(true);
   Wire1.begin(SDA_PIN, SCK_PIN);  // custom i2c port on ESP
   lcd.begin(20,4, Wire1);
-  lcd.createChar(1, degree_char); // degree character for LCD
-  lcd.createChar(2, deg_f_char);  // degF character for LCD
-  lcd.createChar(3, deg_c_char);  // degC character for LCD
-  lcd.createChar(4, in_char);     // in character for LCD
-  lcd.createChar(5, hg_char);     // Hg character for LCD
-  lcd.createChar(6, mm_char);     // mm character for LCD
-  lcd.createChar(7, hpa_char);     // hPa character for LCD
+  lcd.createChar(1, (uint8_t *)degree_char); // degree character for LCD
+  lcd.createChar(2, (uint8_t *)deg_f_char);  // degF character for LCD
+  lcd.createChar(3, (uint8_t *)deg_c_char);  // degC character for LCD
+  lcd.createChar(4, (uint8_t *)in_char);     // in character for LCD
+  lcd.createChar(5, (uint8_t *)hg_char);     // Hg character for LCD
+  lcd.createChar(6, (uint8_t *)mm_char);     // mm character for LCD
+  lcd.createChar(7, (uint8_t *)hpa_char);     // hPa character for LCD
   lcd.setBacklight(255);
   //reset LCD
   //don't call clear() every refresh to avoid flashing
@@ -212,7 +136,8 @@ void setup()
   pinMode(0,INPUT_PULLUP); //set PRG button as an input
   WiFi.onEvent(WiFiEvent);
   WiFi.mode(WIFI_MODE_STA);
-  //WiFi.begin();
+  if(savedData.getBool("WifiIsSetup") == true)
+    WiFi.begin();
   #else
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   #endif
@@ -222,6 +147,24 @@ void setup()
   {
     timeClient.begin();
   }
+
+  if(MDNS.begin(MDNS_NAME))
+    Serial.println("MDNS start broadcast");
+  
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+      request->send(200, "text/plain", getSimpleData());
+  });
+  
+  server.onNotFound([](AsyncWebServerRequest *request)
+  {
+    request->send(404, "text/plain", "404: Not found");
+  });
+
+  server.begin();
+
+  WiFi.setSleep(true);
+
   Serial.printf("Setup done!\r\n");
 }
 
@@ -343,6 +286,7 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
 
 #ifdef USE_WPS
 void wpsStart() {
+  savedData.putBool("WifiIsSetup", false);
   esp_wps_config_t config;
   memset(&config, 0, sizeof(esp_wps_config_t));
   config.wps_type = WPS_TYPE_PBC;
@@ -375,11 +319,14 @@ void wpsStop() {
 
 void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info) {
   switch (event) {
-    case ARDUINO_EVENT_WIFI_STA_START: Serial.println("Station Mode Started"); break;
+    case ARDUINO_EVENT_WIFI_STA_START: 
+      Serial.println("Station Mode Started");
+      break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       Serial.println("Connected to :" + String(WiFi.SSID()));
       Serial.print("Got IP: ");
       Serial.println(WiFi.localIP());
+      savedData.putBool("WifiIsSetup", true);
       break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       Serial.println("Disconnected from station, attempting reconnection");
@@ -401,8 +348,27 @@ void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info) {
       wpsStop();
       wpsStart();
       break;
-    default:                       break;
+    default:
+      break;
   }
 }
-
 #endif
+
+char * getSimpleData()
+{
+  const char * fmt_str = 
+  "Weather on %s, last updated %02d:%02d ago\n"
+  "Temp: %5.1f deg. F Hum: %3.0f%%\n"
+  "Wind: %3s %4.1f MPH\n"
+  "Pressure: %5.2f inHg\n"
+  "Rain: %5.2f in. the last %2d hrs";
+
+  static char ret_str[201] = "";
+  snprintf(ret_str, 201, fmt_str,
+    timeClient.getFormattedTime(),
+    upd_min, upd_sec, receivedData.temperature, receivedData.humidity,
+    (receivedData.wind_heading > -1 && receivedData.wind_heading < 17) ? heading_map[receivedData.wind_heading]:heading_map[16], 
+    receivedData.wind_speed, receivedData.pressure, receivedData.rainfall, receivedData.hours_up);
+  //Serial.println(fmt_str);
+  return ret_str;
+}
