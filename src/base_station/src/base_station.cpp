@@ -6,17 +6,16 @@
 //#define USE_OLD_VAL
 
 #include <Arduino.h>
-#include <LoRaWan_APP.h>
 #include "lora_data.h"
 #ifndef USE_OLD_VAL
 #include "adc_lut.h"
 #endif
+#include <RadioLib.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
-//#include <Adafruit_SHT31.h>
+#include <SHTSensor.h>
 #include <ESP32Time.h> //onboard rtc library
-//#include <HT_SSD1306Wire.h> //onboard OLED display
 
 //Sleep time (50 seconds)
 const unsigned int SLEEP_TIME = 50 * 1000000;
@@ -25,7 +24,7 @@ const unsigned int RESET_MAX = 48;
 
 //Values that are kept when sleeping and waking up
 RTC_DATA_ATTR uint16_t bootcycles = 0;
-RTC_DATA_ATTR unsigned long lastWakeup = 0;
+//RTC_DATA_ATTR unsigned long lastWakeup = 0;
 RTC_DATA_ATTR unsigned long lastWakeupMillis = 0;
 RTC_DATA_ATTR float raincount = 0.0F;
 
@@ -35,16 +34,12 @@ ESP32Time rtc;
 // **** LoRa setup section ****
 //Set this to be the same on both base station and receivers
 uint16_t STATION_KEY = 0xF00D;
-
 lora_packet_t dataPacket = 
 {
   //dummy values for testing
   //0xF00D, 5, 5.5F, 81.4F, 70.5F, 25.83F
 };
-
-static RadioEvents_t RadioEvents;
-void OnTxDone( void );
-void OnTxTimeout( void );
+SX1262 radio = new Module(LORA_NSS, LORA_DIO, LORA_RST, LORA_BSY);
 // ****** END LoRa Setup ******
 
 // **** SENSORS SECTION ****
@@ -87,9 +82,6 @@ long raininterval = 0;
 long rainlast = 0;
 // ****** END SENSORS SECTION ******
 
-// onboard OLED display
-// SSD1306Wire oled(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED);
-
 void wind_spd_IRQ()
 {
   if (millis() - lastWindIRQ > 10) // Ignore switch-bounce glitches less than 10ms (142MPH max reading) after the reed switch closes
@@ -103,7 +95,7 @@ float get_wind_speed()
 {
 	float deltaTime = millis() - lastWindCheck;
 
-	deltaTime /= 1000.0; //Convert to seconds
+	deltaTime /= 1000.0F; //Convert to seconds
 
 	float windSpeed = (float)(windRevs / BOUNCE_COMPENSATION) / deltaTime;
 
@@ -221,17 +213,7 @@ void rainIRQ()
 	}
 }
 
-void OnTxDone( void )
-{
-  Radio.Sleep();
-	Serial.println("TX done......");
-}
 
-void OnTxTimeout( void )
-{
-  Radio.Sleep();
-  Serial.println("TX Timeout......");
-}
 
 void print_wakeup_reason()
 {
@@ -284,25 +266,35 @@ void setup()
       raincount += 0.2794;
     #endif
     //record our last wakeup time
-    lastWakeup = rtc.getEpoch();
+    //lastWakeup = rtc.getEpoch();
     lastWakeupMillis = rtc.getMillis();
   }
   
   Serial.begin(115200);
   print_wakeup_reason();
-  //lora setup stuff
-  Mcu.begin(WIFI_LORA_32_V3,SLOW_CLK_TPYE);
 
-  RadioEvents.TxDone = OnTxDone;
-  RadioEvents.TxTimeout = OnTxTimeout;
-  
-  Radio.Init( &RadioEvents );
-  Radio.SetChannel( RF_FREQUENCY );
-  Radio.SetTxConfig( MODEM_LORA, TX_OUTPUT_POWER, 0, LORA_BANDWIDTH,
-                                  LORA_SPREADING_FACTOR, LORA_CODINGRATE,
-                                  LORA_PREAMBLE_LENGTH, LORA_FIX_LENGTH_PAYLOAD_ON,
-                                  true, 0, 0, LORA_IQ_INVERSION_ON, 3000 );
-  
+  //LoRa setup
+  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI);
+  radio.reset();
+  int16_t res = radio.begin(LORA_FREQ, LORA_BW, LORA_SF, LORA_CR);
+  if(RADIOLIB_ERR_NONE != res)
+  {
+    //why is my white led blinking??
+    //check here: https://jgromes.github.io/RadioLib/group__status__codes.html
+    uint8_t ledOn = 0;
+    pinMode(LED_BUILTIN, OUTPUT);
+
+    while(1)
+    {
+      ledOn = ~ledOn;
+      Serial.println("Could not init SX1262 radio!!!");
+      Serial.printf("Code: %d\r\n", res);
+      digitalWrite(LED_BUILTIN, ledOn);
+      delay(500);
+    }
+  }
+  radio.setOutputPower(LORA_TX_POWER);
+
   //setup wind sensors and rain gauge
   analogReadResolution(12);
   pinMode(WIND_DIR_PIN, ANALOG);
@@ -315,15 +307,15 @@ void setup()
   if (!bme.begin(BME_ADDRESS, &Wire1) ) 
   {
     Serial.print("BME280 not found. Check wiring!\n");
-    while(true)
-    {
-      delay(100);
-    }
+    delay(5000);
+    //try again
+    ESP.restart();
   }
   // if (!sht.begin(SHT_ADDRESS) )
   // {
   //   Serial.print("SHT31 not found. Check wiring!\n");
   // }
+  
   //setup the sensor for weather station scenario per datasheet section 3.5
   //see the Adafruit library "advanced_settings" example
   bme.setSampling(
@@ -362,15 +354,15 @@ void setup()
   Serial.printf("Barometer reading: %.2f hPa\r\n", dataPacket.pressure * 33.86F);
   Serial.printf("Offset: %.2f\r\n", PRESSURE_OFFSET * 0.01F);
   #endif
-  Radio.Send( (uint8_t *) &dataPacket, sizeof(dataPacket) ); //send the package out
-  Radio.IrqProcess();
+  radio.transmit((const uint8_t *) &dataPacket, sizeof(dataPacket));
+
   delay(100);
   Serial.printf("Processing done. Going to sleep now.\r\n");
   Serial.flush();
-  Radio.Sleep();
+  radio.sleep(false);
 
   //set our last wakeup times
-  lastWakeup = rtc.getEpoch();
+  //lastWakeup = rtc.getEpoch();
   lastWakeupMillis = rtc.getMillis();
 
   //sleep for a minute at a time

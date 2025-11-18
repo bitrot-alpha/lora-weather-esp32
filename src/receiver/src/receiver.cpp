@@ -5,10 +5,9 @@
 // Pairs with base_station to display weather data
 
 #include <Arduino.h>
-#include <LoRaWan_APP.h>
 #include <Wire.h>
 #include <LiquidCrystal_PCF8574.h>
-#include <HT_SSD1306Wire.h>
+#include <RadioLib.h>
 #include "lora_data.h"
 #include "lcd_chars.h"
 #include <Preferences.h>
@@ -25,8 +24,6 @@
 
 //enable WPS or use hardcoded wifi credentials
 #define USE_WPS
-//use OLED
-//#define OLED_ENABLED
 //SI/US customary units toggle, comment out to use SI units
 #define USE_IMPERIAL
 
@@ -36,22 +33,28 @@
   #include "esp_wps.h"
 #endif
 
+//functions
+ICACHE_RAM_ATTR void loraPacketReceived(void);
+void processPacket();
+char * getSimpleData();
+void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info);
+void wpsStart();
+void wpsStop();
+//------------------------------------
+
 const char HOSTNAME[] = "WeatherStation";
 const char MDNS_NAME[] = "weather-station";
 
 //LoRa setup section
-#define RX_TIMEOUT_VALUE            1000
+SX1262 radio = new Module(LORA_NSS, LORA_DIO, LORA_RST, LORA_BSY);
 const uint16_t STATION_KEY = 0xF00D;
-static RadioEvents_t RadioEvents;
+volatile bool flagReceived = false;
 //END LoRa setup section
 
 //I2C Setup here
 const uint8_t SDA_PIN = 41;
 const uint8_t SCK_PIN = 42;
 const uint8_t I2C_ADDR = 0x27;
-#ifdef OLED_ENABLED
-SSD1306Wire oled(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED);
-#endif
 
 LiquidCrystal_PCF8574 lcd(I2C_ADDR);
 
@@ -60,8 +63,6 @@ char temperature_str[13] = "";
 char humidity_str[11] = "";
 char pressure_str[21] = "";
 char rainfall_str[21] = "";
-char oled_line1[21] = "";
-char oled_line2[21] = "";
 
 static lora_packet_t receivedData =
 {
@@ -97,11 +98,16 @@ AsyncWebServer server(80);
 
 void setup()
 {
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, 0);
+
   savedData.begin("wifidata", false);
   Serial.begin(115200);
   LittleFS.begin(true);
+  SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI);
   Wire1.begin(SDA_PIN, SCK_PIN);  // custom i2c port on ESP
   lcd.begin(20,4, Wire1);
+
   lcd.createChar(1, (uint8_t *)degree_char); // degree character for LCD
   lcd.createChar(2, (uint8_t *)deg_f_char);  // degF character for LCD
   lcd.createChar(3, (uint8_t *)deg_c_char);  // degC character for LCD
@@ -116,21 +122,21 @@ void setup()
   lcd.clear();
 
   //lora init section
-  Mcu.begin(WIFI_LORA_32_V3,SLOW_CLK_TPYE);
-  RadioEvents.RxDone = OnRxDone;
-  Radio.Init( &RadioEvents );
-  Radio.SetChannel( RF_FREQUENCY );
-  Radio.SetRxConfig( MODEM_LORA, LORA_BANDWIDTH, LORA_SPREADING_FACTOR,
-                              LORA_CODINGRATE, 0, LORA_PREAMBLE_LENGTH,
-                              LORA_SYMBOL_TIMEOUT, LORA_FIX_LENGTH_PAYLOAD_ON,
-                              0, true, 0, 0, LORA_IQ_INVERSION_ON, true );
+  int16_t res = radio.begin(LORA_FREQ, LORA_BW, LORA_SF, LORA_CR);
+  if(RADIOLIB_ERR_NONE != res)
+  {
+    uint8_t ledOn = 0;
+    while(1)
+    {
+      ledOn = ~ledOn;
+      Serial.println("Could not init SX1262 radio!!!");
+      Serial.printf("Code: %d\r\n", res);
+      digitalWrite(LED_BUILTIN, ledOn);
+      delay(500);
+    }
+  }
+  radio.setOutputPower(LORA_TX_POWER);
 
-#ifdef OLED_ENABLED
-  oled.init();
-  oled.clear();
-  oled.screenRotate(ANGLE_180_DEGREE);
-  oled.setFont(ArialMT_Plain_16);
-#endif
   WiFi.setHostname(HOSTNAME);
   #ifdef USE_WPS
   pinMode(0,INPUT_PULLUP); //set PRG button as an input
@@ -165,13 +171,20 @@ void setup()
 
   WiFi.setSleep(true);
 
+  radio.setDio1Action(loraPacketReceived);
+  radio.startReceive();
+
   Serial.printf("Setup done!\r\n");
 }
 
 void loop()
 {
-  unsigned long now = millis();
+  if(flagReceived)
+  {
+    processPacket();
+  }
 
+  unsigned long now = millis();
   //wait 1 second between outputs to display
   if(now - prevDisplayTime > 1000)
   {
@@ -208,64 +221,45 @@ void loop()
 
     if(WiFi.status() != WL_CONNECTED)
     {
-      #ifdef OLED_ENABLED
-      snprintf(oled_line1, 21, "No WiFi!\0");
-      #ifdef USE_WPS
-      snprintf(oled_line2, 21, "Press PRG 4 WPS\0");
-      Serial.printf("Not connected. Reason: %d\r\n", WiFi.status() );
-      #else
-      snprintf(oled_line2, 21, "\0");
-      #endif
-      #endif
+      //blink the white led here?
     }
     else
     {
       timeClient.update();
-      #ifdef OLED_ENABLED
-      oled.clear();
-      snprintf(oled_line1, 21, "Time: %02d:%02d:%02d\0", 
-               timeClient.getHours(),
-               timeClient.getMinutes(),
-               timeClient.getSeconds()
-              );
-      
-      uint32_t ip = WiFi.localIP();
-      snprintf(oled_line2, 21, "IP: %s\0", inet_ntoa(ip) );
-      #endif
     }
-    #ifdef OLED_ENABLED
-    oled.drawString(0, 0, oled_line1);
-    oled.drawString(0, 14, oled_line2);
-    oled.display();
-    #endif
+
     #ifdef USE_WPS
     if (digitalRead(0) == 0)
     {
       wpsStart();
     }
     #endif
-    Radio.Rx(0); //put the LoRa radio into receive mode
   }
-
-  Radio.IrqProcess(); //Wait for LoRa packet
 }
 
-//lora receive function
-void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
+ICACHE_RAM_ATTR void loraPacketReceived(void)
 {
-  Serial.printf("\r\nreceived packet with rssi %d , length %d\r\n",rssi,size);
+  flagReceived = true;
+}
 
-  //dumb pointer trick to save memory
-  lora_packet_t* temp = (lora_packet_t*)(void*) payload;
+void processPacket()
+{
+  flagReceived = false;
+  const unsigned int packetLen = sizeof(lora_packet_t);
+  lora_packet_t temp;
 
-  //check that what we received is from our weather station
-  //only update values if it is
-  if(size == sizeof(lora_packet_t))
+  Serial.println();
+  Serial.println("Packet received");
+  Serial.printf("RSSI: %7.3f dBm\r\n", radio.getRSSI());
+  Serial.printf("SNR: %7.3f dB\r\n",radio.getSNR());
+  
+  if(packetLen == radio.getPacketLength())
   {
-    if( temp->station_key == STATION_KEY )
+    radio.readData((uint8_t *)&temp, packetLen);
+    if(temp.station_key == STATION_KEY)
     {
+      memcpy(&receivedData, &temp, sizeof(lora_packet_t));
       lastUpdate = millis();
-      memcpy( &receivedData, payload, sizeof(lora_packet_t) );
       Serial.printf("Wind: %2s %4.1f MPH\n\r", heading_map[receivedData.wind_heading], receivedData.wind_speed);
       Serial.printf("Temp:%4.1f°F", receivedData.temperature);
       Serial.printf(" Hum:%3.0f%%\n\r", receivedData.humidity);
@@ -281,7 +275,8 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
   {
     Serial.printf("Not data from weather station\r\n");
   }
-  Radio.Sleep();
+
+  radio.startReceive();
 }
 
 #ifdef USE_WPS
@@ -294,7 +289,6 @@ void wpsStart() {
   strcpy(config.factory_info.model_number, CONFIG_IDF_TARGET);
   strcpy(config.factory_info.model_name, "ESPRESSIF IOT");
   strcpy(config.factory_info.device_name, "Weather Receiver");
-  strcpy(config.pin, "00000000");
 
   Serial.println("WPS started.");
 
