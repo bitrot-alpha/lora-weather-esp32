@@ -14,4 +14,20 @@
 #define LORA_MISO   11
 #define LORA_SCK     9
 
+//OLED display pins
+#define VEXT_CTRL   36
+#define OLED_PWR    VEXT_CTRL
+#define OLED_SDA    17
+#define OLED_SCL    18
+#define OLED_RST    21
+
+//PRG button ("USER_Key")
+#define BTN_ONBOARD     0
+//onboard LED is already in the Arduino board def.
+//#define LED_BUILTIN   35
+
+//Battery charger circuit
+#define ADC_CTRL    37
+#define VBAT_PIN     1
+
 #endif
