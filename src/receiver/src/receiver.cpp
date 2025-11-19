@@ -8,6 +8,7 @@
 #include <Wire.h>
 #include <LiquidCrystal_PCF8574.h>
 #include <RadioLib.h>
+#include "heltec_board_pins.h"
 #include "lora_data.h"
 #include "lcd_chars.h"
 #include <Preferences.h>

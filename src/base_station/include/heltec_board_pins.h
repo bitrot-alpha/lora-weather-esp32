@@ -1,0 +1,1 @@
+../../_common/heltec_board_pins.h

@@ -7,6 +7,7 @@
 
 #include <Arduino.h>
 #include "lora_data.h"
+#include "heltec_board_pins.h"
 #ifndef USE_OLD_VAL
 #include "adc_lut.h"
 #endif
@@ -157,11 +158,11 @@ const uint8_t determineHeading(uint16_t adc_value)
 
   //headings go clockwise every 22.5 degrees from N (0 deg) to NNW (337.5 deg)
   //bounds are plus minus 2%
-  if (adc_value >= 3034 && adc_value <= 3158)
+  if (adc_value >= 3033 && adc_value <= 3157)
     return 0;
   if (adc_value >= 1567 && adc_value <= 1631)
     return 1;
-  if (adc_value >= 1781 && adc_value <= 1854)
+  if (adc_value >= 1781 && adc_value <= 1853)
     return 2;
   if (adc_value >= 323 && adc_value <= 337)
     return 3;
@@ -171,23 +172,23 @@ const uint8_t determineHeading(uint16_t adc_value)
     return 5;
   if (adc_value >= 713 && adc_value <= 742)
     return 6;
-  if (adc_value >= 489 && adc_value <= 508)
+  if (adc_value >= 488 && adc_value <= 508)
     return 7;
   if (adc_value >= 1109 && adc_value <= 1154)
     return 8;
-  if (adc_value >= 945 && adc_value <= 983)
+  if (adc_value >= 944 && adc_value <= 983)
     return 9;
-  if (adc_value >= 2433 && adc_value <= 2532)
+  if (adc_value >= 2432 && adc_value <= 2531)
     return 10;
-  if (adc_value >= 2314 && adc_value <= 2409)
+  if (adc_value >= 2314 && adc_value <= 2408)
     return 11;
-  if (adc_value >= 3649 && adc_value <= 3798)
+  if (adc_value >= 3648 && adc_value <= 3797)
     return 12;
-  if (adc_value >= 3195 && adc_value <= 3325)
+  if (adc_value >= 3194 && adc_value <= 3324)
     return 13;
-  if (adc_value >= 3425 && adc_value <= 3565)
+  if (adc_value >= 3425 && adc_value <= 3564)
     return 14;
-  if (adc_value >= 2713 && adc_value <= 2824)
+  if (adc_value >= 2713 && adc_value <= 2823)
     return 15;
   
   return 16;
@@ -239,7 +240,7 @@ void print_wakeup_reason()
       Serial.println("Wakeup caused by ULP program"); 
       break;
     default:
-      Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason);
+      Serial.printf("Wakeup was not caused by deep sleep: %d\r\n",wakeup_reason);
       break;
   }
 }
