@@ -353,10 +353,10 @@ void setup()
   bme.takeForcedMeasurement();
   #ifdef CONV_IMPERIAL
   dataPacket.temperature = ( (bme.readTemperature() * 1.8F) + 32 );
-  dataPacket.pressure = ( (bme.seaLevelForAltitude(ALTITUDE_METERS, bme.readPressure()) + PRESSURE_OFFSET) / 33.86F);
+  dataPacket.pressure = ( (bme.seaLevelForAltitude(ALTITUDE_METERS, bme.readPressure() * 0.01) + PRESSURE_OFFSET) / 33.86F);
   #else
   dataPacket.temperature = ( (bme.readTemperature() );
-  dataPacket.pressure = ( bme.seaLevelForAltitude(ALTITUDE_METERS, bme.readPressure()) + PRESSURE_OFFSET );
+  dataPacket.pressure = ( bme.seaLevelForAltitude(ALTITUDE_METERS, bme.readPressure() * 0.01) + PRESSURE_OFFSET );
   #endif
   //dataPacket.humidity = bme.readHumidity();
   dataPacket.humidity = sht.getHumidity();
