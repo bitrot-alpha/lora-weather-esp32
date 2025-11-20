@@ -52,14 +52,17 @@ SX1262 radio = new Module(LORA_NSS, LORA_DIO, LORA_RST, LORA_BSY);
 #define CONV_IMPERIAL
 
 Adafruit_BME280 bme;
-//Adafruit_SHT31 sht = Adafruit_SHT31(&Wire1);
+SHTSensor sht(SHTSensor::SHT3X);
+
 const uint8_t SDA_PIN = 39;
 const uint8_t SCK_PIN = 40;
 const uint8_t BME_ADDRESS = 0x76;
-//const uint8_t SHT_ADDRESS = 0x44;
 // calibrate the pressure value using an offset
 // as demonstrated in this video: https://www.youtube.com/watch?v=Wq-Kb7D8eQ4
-const float PRESSURE_OFFSET = 46.34F * 100.0F;
+const float PRESSURE_OFFSET = -1.65F;
+//feet to meters: divide by 3.2[...]
+//delete the divide portion if you're not using US customary units
+const float ALTITUDE_METERS = 1346.0F / 3.28084F;
 
 //anemometer pin
 const uint8_t WIND_SPD_PIN = 4;
@@ -312,10 +315,13 @@ void setup()
     //try again
     ESP.restart();
   }
-  // if (!sht.begin(SHT_ADDRESS) )
-  // {
-  //   Serial.print("SHT31 not found. Check wiring!\n");
-  // }
+  if (!sht.init(Wire1) )
+  {
+    Serial.print("SHT31 not found. Check wiring!\n");
+    delay(5000);
+    //try again
+    ESP.restart();
+  }
   
   //setup the sensor for weather station scenario per datasheet section 3.5
   //see the Adafruit library "advanced_settings" example
@@ -323,7 +329,7 @@ void setup()
                   Adafruit_BME280::MODE_FORCED,
                   Adafruit_BME280::SAMPLING_X1, // temperature
                   Adafruit_BME280::SAMPLING_X1, // pressure
-                  Adafruit_BME280::SAMPLING_X1, // humidity
+                  Adafruit_BME280::SAMPLING_NONE, // humidity
                   Adafruit_BME280::FILTER_OFF
                  );
   //wait for 10 seconds to gather wind data
@@ -335,10 +341,15 @@ void setup()
   //bme measure
   //measurements are converted to US/Imperial units
   bme.takeForcedMeasurement();
+  #ifdef CONV_IMPERIAL
   dataPacket.temperature = ( (bme.readTemperature() * 1.8F) + 32 );
-  dataPacket.pressure = ( (bme.readPressure() + PRESSURE_OFFSET) / 3386.0F);
-  dataPacket.humidity = bme.readHumidity();
-  //datapacket.humidity = sht.readHumidity();
+  dataPacket.pressure = ( (bme.seaLevelForAltitude(ALTITUDE_METERS, bme.readPressure()) + PRESSURE_OFFSET) / 33.86F);
+  #else
+  dataPacket.temperature = ( (bme.readTemperature() );
+  dataPacket.pressure = ( bme.seaLevelForAltitude(ALTITUDE_METERS, bme.readPressure()) + PRESSURE_OFFSET );
+  #endif
+  //dataPacket.humidity = bme.readHumidity();
+  dataPacket.humidity = sht.getHumidity();
 
   //wind stuff
   heading_raw = getADCValue();
@@ -352,8 +363,8 @@ void setup()
 
 	Serial.printf("\r\nsending packet\r\n");
   #ifdef CAL_BAROMETER
-  Serial.printf("Barometer reading: %.2f hPa\r\n", dataPacket.pressure * 33.86F);
-  Serial.printf("Offset: %.2f\r\n", PRESSURE_OFFSET * 0.01F);
+  Serial.printf("Barometer reading: %.2f hPa, %.2f inHg\r\n", dataPacket.pressure * 33.86F, dataPacket.pressure);
+  Serial.printf("Offset: %.2f\r\n", PRESSURE_OFFSET);
   #endif
   radio.transmit((const uint8_t *) &dataPacket, sizeof(dataPacket));
 
