@@ -310,15 +310,25 @@ void setup()
   Wire1.begin(SDA_PIN, SCK_PIN);
   if (!bme.begin(BME_ADDRESS, &Wire1) ) 
   {
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, 1);
     Serial.print("BME280 not found. Check wiring!\n");
     delay(5000);
+    digitalWrite(LED_BUILTIN, 0);
+    pinMode(LED_BUILTIN, INPUT);
+    delay(1);
     //try again
     ESP.restart();
   }
   if (!sht.init(Wire1) )
   {
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, 1);
     Serial.print("SHT31 not found. Check wiring!\n");
     delay(5000);
+    digitalWrite(LED_BUILTIN, 0);
+    pinMode(LED_BUILTIN, INPUT);
+    delay(1);
     //try again
     ESP.restart();
   }
