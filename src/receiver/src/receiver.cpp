@@ -12,6 +12,7 @@
 #include "lora_data.h"
 #include "lcd_chars.h"
 #include <Preferences.h>
+#include <math.h>
 //wifi stuff
 #include <NTPClient.h>
 #include <WiFi.h>
@@ -37,6 +38,7 @@
 //functions
 ICACHE_RAM_ATTR void loraPacketReceived(void);
 void processPacket();
+float getDewPoint(float temp, float hum);
 char * getSimpleData();
 void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info);
 void wpsStart();
@@ -280,6 +282,29 @@ void processPacket()
   radio.startReceive();
 }
 
+//dewpoint calculation from https://cales.arizona.edu/azmet/dewpoint.html
+//reproduced from Snyder & Snow - UC Davis Coop Extension Leaflet 21372
+//"Converting Humidity Expressions with Computers and Calculators"
+float getDewPoint(float temp, float hum, bool convert_fahrenheit = false)
+{
+  float temp_celsius = temp;
+
+  if (convert_fahrenheit)
+  {
+    temp_celsius = (temp_celsius - 32.0F) / 1.8F;
+  }
+
+  float B = (log(hum / 100) + ( (17.27F * temp_celsius) / (237.3F + temp_celsius) ) ) / 17.27F;
+  float D = (237.3F * B) / (1.0F - B);
+
+  if (convert_fahrenheit)
+  {
+    D = (D * 1.8F) + 32.0F;
+  }
+
+  return D;
+}
+
 #ifdef USE_WPS
 void wpsStart() {
   savedData.putBool("WifiIsSetup", false);
@@ -356,14 +381,15 @@ char * getSimpleData()
   "Temp: %5.1f deg. F Hum: %3.0f%%\n"
   "Wind: %3s %4.1f MPH\n"
   "Pressure: %5.2f inHg\n"
-  "Rain: %5.2f in. the last %2d hrs";
+  "Rain: %5.2f in. the last %2d hrs\n\n"
+  "Dewpoint: %5.1f deg. F";
 
   static char ret_str[201] = "";
   snprintf(ret_str, 201, fmt_str,
     timeClient.getFormattedTime(),
     upd_min, upd_sec, receivedData.temperature, receivedData.humidity,
     (receivedData.wind_heading > -1 && receivedData.wind_heading < 17) ? heading_map[receivedData.wind_heading]:heading_map[16], 
-    receivedData.wind_speed, receivedData.pressure, receivedData.rainfall, receivedData.hours_up);
+    receivedData.wind_speed, receivedData.pressure, receivedData.rainfall, receivedData.hours_up, getDewPoint(receivedData.temperature, receivedData.humidity, true) );
   //Serial.println(fmt_str);
   return ret_str;
 }
