@@ -1,6 +1,6 @@
 # LVGL Demo with SHT31-D
 
-This is a demo of LVGL on an ST7796S 4.0 inch SPI display.  
+This is a demo of LVGL on an ST7796S 4.0 inch SPI display with an SHT31-D sensor.  
 The red board with SD card slot, https://www.lcdwiki.com/4.0inch_SPI_Module_ST7796  
 It shows loading images and dynamic text updates with the SHT sensor values.  
 This uses a standard ESP32 dev board, NOT the Heltec board with the LoRa modem.  
