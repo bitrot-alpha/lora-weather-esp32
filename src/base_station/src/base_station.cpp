@@ -161,25 +161,23 @@ const uint8_t determineHeading(uint16_t adc_value)
   #else
 
   //headings go clockwise every 22.5 degrees from N (0 deg) to NNW (337.5 deg)
-  //bounds are plus minus 25mV
-  if (adc_value >= 2508 && adc_value <= 2558)    return 0;
-  if (adc_value >= 1283 && adc_value <= 1333)    return 1;
-  if (adc_value >= 1462 && adc_value <= 1512)    return 2;
-  //try and get the higher value first
-  if (adc_value >= 275 && adc_value <= 325)    return 4;
-  //these overlap sadly
-  if (adc_value >= 245 && adc_value <= 295)    return 3;
-  if (adc_value >= 187 && adc_value <= 237)    return 5;
-  if (adc_value >= 570 && adc_value <= 620)    return 6;
-  if (adc_value >= 383 && adc_value <= 433)    return 7;
-  if (adc_value >= 901 && adc_value <= 951)    return 8;
-  if (adc_value >= 764 && adc_value <= 814)    return 9;
-  if (adc_value >= 2006 && adc_value <= 2056)    return 10;
-  if (adc_value >= 1907 && adc_value <= 1957)    return 11;
-  if (adc_value >= 3021 && adc_value <= 3071)    return 12;
-  if (adc_value >= 2642 && adc_value <= 2692)    return 13;
-  if (adc_value >= 2834 && adc_value <= 2884)    return 14;
-  if (adc_value >= 2240 && adc_value <= 2290)    return 15;
+  //bounds are plus minus 75mV, sadly some overlap
+  if (adc_value >= 2458 && adc_value <= 2608)    return 0;
+  if (adc_value >= 1233 && adc_value <= 1383)    return 1;
+  if (adc_value >= 1412 && adc_value <= 1562)    return 2;
+  if (adc_value >= 195 && adc_value <= 345)    return 3;
+  if (adc_value >= 225 && adc_value <= 375)    return 4;
+  if (adc_value >= 137 && adc_value <= 287)    return 5;
+  if (adc_value >= 520 && adc_value <= 670)    return 6;
+  if (adc_value >= 333 && adc_value <= 483)    return 7;
+  if (adc_value >= 851 && adc_value <= 1001)    return 8;
+  if (adc_value >= 714 && adc_value <= 864)    return 9;
+  if (adc_value >= 1956 && adc_value <= 2106)    return 10;
+  if (adc_value >= 1857 && adc_value <= 2007)    return 11;
+  if (adc_value >= 2971 && adc_value <= 3121)    return 12;
+  if (adc_value >= 2592 && adc_value <= 2742)    return 13;
+  if (adc_value >= 2784 && adc_value <= 2934)    return 14;
+  if (adc_value >= 2190 && adc_value <= 2340)    return 15;
 
   return 16;
   #endif
