@@ -43,7 +43,7 @@ static const uint16_t screenWidth  = 480;
 static const uint16_t screenHeight = 320;
 unsigned long handler_last_called = 0UL;
 
-static lv_color_t buf1[screenWidth * 5];
+static lv_color_t buf1[screenWidth * 8];
 static lv_display_t * disp;
 
 static lv_obj_t * text_label_temperature;
