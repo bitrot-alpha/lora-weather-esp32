@@ -43,7 +43,8 @@ static const uint16_t screenWidth  = 480;
 static const uint16_t screenHeight = 320;
 unsigned long handler_last_called = 0UL;
 
-static lv_color_t buf1[screenWidth * 8];
+//static lv_color_t buf1[screenWidth * 8];
+static uint32_t * disp_buf = nullptr;
 static lv_display_t * disp;
 
 static lv_obj_t * text_label_temperature;
@@ -127,8 +128,16 @@ void setup()
 
     disp = lv_display_create(screenWidth, screenHeight);
     lv_display_set_flush_cb(disp, my_disp_flush);
+    //ints are 32 bit, or 4 bytes
+    //VS code tells me buf_size is 38400
+    //38400 * 4 = 153600 or 150kB
+    //much more than 1/4 of the screen and the program dies
+    //SRAM is supposedly slower than DRAM
+    //but more buffer is better than less
+    uint32_t buf_size = (uint32_t)(0.25F * screenWidth * screenHeight);
+    disp_buf = (uint32_t *)lv_malloc(buf_size);
     lv_display_set_buffers(
-        disp, buf1, NULL, sizeof(buf1),
+        disp, disp_buf, NULL, buf_size,
         LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     create_main_gui();
