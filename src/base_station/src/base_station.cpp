@@ -159,14 +159,13 @@ const uint8_t determineHeading(uint16_t adc_value)
 
   return 8;
   #else
-
   //headings go clockwise every 22.5 degrees from N (0 deg) to NNW (337.5 deg)
   //bounds are plus minus 75mV, sadly some overlap
-  if (adc_value >= 2458 && adc_value <= 2608)    return 0;
+  if (adc_value >= 2458 && adc_value <= 2598)    return 0;
   if (adc_value >= 1233 && adc_value <= 1383)    return 1;
   if (adc_value >= 1412 && adc_value <= 1562)    return 2;
-  if (adc_value >= 195 && adc_value <= 345)    return 3;
   if (adc_value >= 225 && adc_value <= 375)    return 4;
+  if (adc_value >= 195 && adc_value <= 345)    return 3;
   if (adc_value >= 137 && adc_value <= 287)    return 5;
   if (adc_value >= 520 && adc_value <= 670)    return 6;
   if (adc_value >= 333 && adc_value <= 483)    return 7;
