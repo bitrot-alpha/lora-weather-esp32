@@ -907,9 +907,9 @@
 #endif
 
 /** API for Arduino LittleFs. */
-#define LV_USE_FS_ARDUINO_ESP_LITTLEFS 0
+#define LV_USE_FS_ARDUINO_ESP_LITTLEFS 1
 #if LV_USE_FS_ARDUINO_ESP_LITTLEFS
-    #define LV_FS_ARDUINO_ESP_LITTLEFS_LETTER '\0'  /**< Set an upper-case driver-identifier letter for this driver (e.g. 'A'). */
+    #define LV_FS_ARDUINO_ESP_LITTLEFS_LETTER 'A'  /**< Set an upper-case driver-identifier letter for this driver (e.g. 'A'). */
     #define LV_FS_ARDUINO_ESP_LITTLEFS_PATH ""      /**< Set the working directory. File/directory paths will be appended to it. */
 #endif
 

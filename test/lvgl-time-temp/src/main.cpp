@@ -43,7 +43,7 @@ static const uint16_t screenWidth  = 480;
 static const uint16_t screenHeight = 320;
 unsigned long handler_last_called = 0UL;
 
-static lv_color_t buf1[screenWidth * 4];
+static lv_color_t buf1[screenWidth * 5];
 static lv_display_t * disp;
 
 static lv_obj_t * text_label_temperature;
@@ -82,7 +82,7 @@ Preferences savedData;
 void setup()
 {
     Serial.begin(115200);
-    
+
     savedData.begin("wifidata", false);
     WiFi.setHostname("ESP32 clock");
 
@@ -120,7 +120,7 @@ void setup()
     }
     WiFi.setSleep(true);
 
-    set_brightness(5);
+    set_brightness(25);
 
     // LVGL init
     lv_init();
@@ -294,41 +294,45 @@ void create_main_gui(void)
     text_label_time = lv_label_create(lv_screen_active());
     text_label_wifi = lv_label_create(lv_screen_active());
 
+    //show icons
+    //LV_IMAGE_DECLARE(thermometer);
+    thermometer_img = lv_image_create(lv_screen_active());
+    lv_image_set_src(thermometer_img, "A:/thermometer.bin");
+    lv_obj_align(thermometer_img, LV_ALIGN_BOTTOM_LEFT, 25, -10);
+
+    //LV_IMAGE_DECLARE(droplet);
+    droplet_img = lv_image_create(lv_screen_active());
+    lv_image_set_src(droplet_img, "A:/droplet.bin");
+    lv_obj_align(droplet_img, LV_ALIGN_BOTTOM_RIGHT, -125, -15);
+
     //set font, color, and alignment
     lv_obj_set_style_text_font(text_label_temperature, &lv_font_montserrat_32, 0);
     lv_obj_set_style_text_color(text_label_temperature, lv_palette_main(LV_PALETTE_BLUE),0);
     lv_label_set_text(text_label_temperature, "--.- °F");
-    lv_obj_align(text_label_temperature, LV_ALIGN_BOTTOM_MID, -110, -40);
+    lv_obj_align_to(text_label_temperature, thermometer_img, LV_ALIGN_OUT_RIGHT_MID, 20,0);
 
     lv_obj_set_style_text_font(text_label_humidity, &lv_font_montserrat_32, 0);
     lv_obj_set_style_text_color(text_label_humidity, lv_palette_main(LV_PALETTE_BLUE),0);
     lv_label_set_text(text_label_humidity, " --- %");
-    lv_obj_align(text_label_humidity, LV_ALIGN_BOTTOM_MID, 175, -40);
+    lv_obj_align_to(text_label_humidity, droplet_img, LV_ALIGN_OUT_RIGHT_MID, 20, 0);
 
     lv_obj_set_style_text_font(text_label_time, &clock_184, 0);
-    lv_obj_set_style_text_color(text_label_time, lv_palette_main(LV_PALETTE_NONE),0);
+    lv_obj_set_style_bg_color(text_label_time, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(text_label_time, LV_OPA_COVER, 0);
+    lv_obj_set_style_pad_all(text_label_time, 20, 0);
+    lv_obj_set_style_text_color(text_label_time, lv_palette_main(LV_PALETTE_RED),0);
     lv_label_set_text(text_label_time, "XX:XX");
     lv_obj_align(text_label_time, LV_ALIGN_CENTER, 0, -40);
 
     lv_obj_set_style_text_font(text_label_wifi, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(text_label_wifi, lv_palette_main(LV_PALETTE_NONE),0);
     lv_label_set_text(text_label_wifi, "WiFi: X");
-    lv_obj_align(text_label_wifi, LV_ALIGN_TOP_MID, 200, 20);
+    lv_obj_align(text_label_wifi, LV_ALIGN_TOP_MID, 200, 0);
 
     // Create timer to update temperature every five seconds
     lv_timer_create(temp_timer_cb, 5000, nullptr);
     //timer to update time and wifi text
     lv_timer_create(upd_time_cb, 500, nullptr);
-
-    //show icons
-    LV_IMAGE_DECLARE(thermometer);
-    thermometer_img = lv_image_create(lv_screen_active());
-    lv_image_set_src(thermometer_img, &thermometer);
-    lv_obj_align_to(thermometer_img, text_label_temperature, LV_ALIGN_LEFT_MID, -75, 0);
-
-    LV_IMAGE_DECLARE(droplet);
-    droplet_img = lv_image_create(lv_screen_active());
-    lv_image_set_src(droplet_img, &droplet);
-    lv_obj_align_to(droplet_img, text_label_humidity, LV_ALIGN_LEFT_MID, -60, 0);
 }
 
 void wpsStart() {
