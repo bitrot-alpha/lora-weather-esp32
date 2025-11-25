@@ -128,11 +128,13 @@ void setup()
 
     disp = lv_display_create(screenWidth, screenHeight);
     lv_display_set_flush_cb(disp, my_disp_flush);
+
+    //LVGL Display Buffer allocation
     //ints are 32 bit, or 4 bytes
     //VS code tells me buf_size is 38400
     //38400 * 4 = 153600 or 150kB
     //much more than 1/4 of the screen and the program dies
-    //SRAM is supposedly slower than DRAM
+    //SRAM(allocate outside of main) is supposedly slower than DRAM (malloc or inside functions)
     //but more buffer is better than less
     uint32_t buf_size = (uint32_t)(0.25F * screenWidth * screenHeight);
     disp_buf = (uint32_t *)lv_malloc(buf_size);
