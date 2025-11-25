@@ -9,7 +9,7 @@
 #include "lora_data.h"
 #include "heltec_board_pins.h"
 #ifndef USE_OLD_VAL
-#include "adc_lut.h"
+//#include "adc_lut.h"
 #endif
 #include <RadioLib.h>
 #include <Wire.h>
@@ -124,7 +124,8 @@ uint16_t getADCValue()
     #ifdef USE_OLD_VAL
     adc_value += analogRead(WIND_DIR_PIN);
     #else
-    adc_value += ADC_LUT[analogRead(WIND_DIR_PIN)];
+    //use ESP32-S3 factory calibration with analogReadMillivolts();
+    adc_value += analogReadMilliVolts(WIND_DIR_PIN);
     #endif
     delay(2);
   }
@@ -160,40 +161,26 @@ const uint8_t determineHeading(uint16_t adc_value)
   #else
 
   //headings go clockwise every 22.5 degrees from N (0 deg) to NNW (337.5 deg)
-  //bounds are plus minus 2%
-  if (adc_value >= 3033 && adc_value <= 3157)
-    return 0;
-  if (adc_value >= 1567 && adc_value <= 1631)
-    return 1;
-  if (adc_value >= 1781 && adc_value <= 1853)
-    return 2;
-  if (adc_value >= 323 && adc_value <= 337)
-    return 3;
-  if (adc_value >= 359 && adc_value <= 374)
-    return 4;
-  if (adc_value >= 254 && adc_value <= 265)
-    return 5;
-  if (adc_value >= 713 && adc_value <= 742)
-    return 6;
-  if (adc_value >= 488 && adc_value <= 508)
-    return 7;
-  if (adc_value >= 1109 && adc_value <= 1154)
-    return 8;
-  if (adc_value >= 944 && adc_value <= 983)
-    return 9;
-  if (adc_value >= 2432 && adc_value <= 2531)
-    return 10;
-  if (adc_value >= 2314 && adc_value <= 2408)
-    return 11;
-  if (adc_value >= 3648 && adc_value <= 3797)
-    return 12;
-  if (adc_value >= 3194 && adc_value <= 3324)
-    return 13;
-  if (adc_value >= 3425 && adc_value <= 3564)
-    return 14;
-  if (adc_value >= 2713 && adc_value <= 2823)
-    return 15;
-  
+  //bounds are plus minus 25mV
+  if (adc_value >= 2508 && adc_value <= 2558)    return 0;
+  if (adc_value >= 1283 && adc_value <= 1333)    return 1;
+  if (adc_value >= 1462 && adc_value <= 1512)    return 2;
+  //try and get the higher value first
+  if (adc_value >= 275 && adc_value <= 325)    return 4;
+  //these overlap sadly
+  if (adc_value >= 245 && adc_value <= 295)    return 3;
+  if (adc_value >= 187 && adc_value <= 237)    return 5;
+  if (adc_value >= 570 && adc_value <= 620)    return 6;
+  if (adc_value >= 383 && adc_value <= 433)    return 7;
+  if (adc_value >= 901 && adc_value <= 951)    return 8;
+  if (adc_value >= 764 && adc_value <= 814)    return 9;
+  if (adc_value >= 2006 && adc_value <= 2056)    return 10;
+  if (adc_value >= 1907 && adc_value <= 1957)    return 11;
+  if (adc_value >= 3021 && adc_value <= 3071)    return 12;
+  if (adc_value >= 2642 && adc_value <= 2692)    return 13;
+  if (adc_value >= 2834 && adc_value <= 2884)    return 14;
+  if (adc_value >= 2240 && adc_value <= 2290)    return 15;
+
   return 16;
   #endif
 }
