@@ -84,7 +84,7 @@ void setup()
     Serial.begin(115200);
 
     savedData.begin("wifidata", false);
-    WiFi.setHostname("ESP32 clock");
+    WiFi.setHostname("ESP32-clock");
 
     pinMode(0,INPUT_PULLUP); //set builtin BOOT button as an input
     WiFi.onEvent(WiFiEvent);
